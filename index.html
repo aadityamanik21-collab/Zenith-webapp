@@ -53,7 +53,7 @@
         .drag-over { border-top: 3px solid #3b82f6; }
 
         /* --- INPUT STANDARDIZATION --- */
-        input[type="date"], input[type="time"], input[type="text"] {
+        input[type="date"], input[type="time"], input[type="text"], input[type="number"] {
             -webkit-appearance: none; appearance: none;
         }
 
@@ -187,11 +187,18 @@
         #preview-list h1 { font-size: 1.5em; font-weight: 800; margin-top: 1em; color: #1e293b; }
         #preview-list h2 { font-size: 1.25em; font-weight: 700; margin-top: 0.8em; color: #334155; }
         #preview-list h3 { font-size: 1.1em; font-weight: 600; margin-top: 0.5em; color: #475569; }
+        
+        .prog-check:checked + div { background-color: #eff6ff; border-color: #3b82f6; }
+        .prog-check:checked + div .check-icon { display: block; }
+        
+        /* HIDDEN CANVAS CONTAINER FOR EXPORTS */
+        #export-canvas-container { position: absolute; left: -9999px; top: -9999px; visibility: hidden; }
     </style>
 </head>
 <body class="text-slate-800">
 
     <div id="season-overlay"></div>
+    <div id="export-canvas-container"></div>
 
     <div class="glass-nav fixed top-0 w-full h-16 px-5 flex items-center justify-between">
         <div class="flex items-center gap-4 w-3/4">
@@ -309,6 +316,17 @@
                 </div>
                 <p class="relative z-10 text-white/90 text-xs mt-4 font-medium" id="stat-health-sub">Analyzing...</p>
             </div>
+            
+            <div class="bento-wide mt-2">
+                 <div class="flex justify-between items-center mb-3 px-1">
+                    <h3 class="font-bold text-slate-700 text-sm">Programs & Rewards</h3>
+                    <button onclick="app.openProgramModal()" class="text-[10px] font-bold bg-purple-50 text-purple-600 px-3 py-1.5 rounded-lg border border-purple-100 shadow-sm active:scale-95 transition-transform"><i class="fas fa-plus mr-1"></i> NEW PROGRAM</button>
+                </div>
+                <div id="programs-list" class="flex gap-3 overflow-x-auto pb-4 snap-x">
+                    <div class="text-xs text-slate-400 italic p-2 w-full text-center">No active programs.</div>
+                </div>
+            </div>
+
             <div class="glass p-4 bg-white flex flex-col justify-between tap-scale">
                 <div class="w-8 h-8 rounded-full bg-green-100 text-green-600 flex items-center justify-center mb-2"><i class="fas fa-flag-checkered"></i></div>
                 <div><p class="text-[10px] font-bold text-slate-400 uppercase">Finish Date</p><h3 class="text-md font-bold text-slate-800 font-mono truncate" id="stat-prediction">--</h3></div>
@@ -348,6 +366,51 @@
         <div class="h-32"></div> 
     </div>
 
+    <div id="preview-overlay" class="preview-overlay" onclick="app.closePreview(event)">
+        <div class="preview-card" onclick="event.stopPropagation()">
+            <div id="preview-header" class="p-6 bg-gradient-to-r from-blue-500 to-indigo-600 text-white relative">
+                <h2 id="prev-date-num" class="text-3xl font-bold truncate pr-6">--</h2>
+                <p id="prev-date-day" class="text-xs font-medium opacity-90 uppercase tracking-widest mt-1">--</p>
+                <button onclick="app.forceClosePreview()" class="absolute top-4 right-4 w-8 h-8 bg-white/20 rounded-full flex items-center justify-center hover:bg-white/30"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="p-4 max-h-[60vh] overflow-y-auto" id="preview-list"></div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="settings-overlay" onclick="if(event.target===this) document.getElementById('settings-overlay').classList.remove('open')">
+        <div class="modal">
+            <h3 class="text-xl font-bold text-slate-800 mb-6">Data Settings</h3>
+            <button onclick="app.exportData()" class="w-full py-4 mb-3 bg-blue-50 text-blue-600 font-bold rounded-xl flex items-center justify-center gap-2"><i class="fas fa-file-export"></i> Backup Data (JSON)</button>
+            <label class="w-full py-4 mb-6 bg-slate-50 text-slate-600 font-bold rounded-xl flex items-center justify-center gap-2 cursor-pointer"><i class="fas fa-file-import"></i> Restore Data <input type="file" class="hidden" accept=".json" onchange="app.importData(this)"></label>
+            <button onclick="if(confirm('Delete EVERYTHING?')){localStorage.clear();location.reload()}" class="w-full py-4 bg-red-50 text-red-500 font-bold rounded-xl"><i class="fas fa-trash-alt mr-2"></i> Factory Reset</button>
+            <div class="mt-8 text-center"><p class="text-[10px] font-black font-mono tracking-widest text-rose-800">MADE BY OG_ADITYAX</p></div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="program-modal-overlay" onclick="if(event.target===this) document.getElementById('program-modal-overlay').classList.remove('open')">
+        <div class="modal">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-xl font-bold text-slate-800">New Program</h3>
+                <button onclick="document.getElementById('program-modal-overlay').classList.remove('open')" class="w-8 h-8 bg-slate-100 rounded-full text-slate-400"><i class="fas fa-times"></i></button>
+            </div>
+            <form onsubmit="app.handleProgramSave(event)">
+                <div class="mb-4"><label class="text-[10px] font-bold text-slate-400 uppercase">Program Name</label><input type="text" id="prog-name" required placeholder="e.g., Exam Prep" class="w-full p-3 bg-slate-100 rounded-xl mt-1 font-semibold outline-none focus:ring-2 focus:ring-purple-500"></div>
+                
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                     <div><label class="text-[10px] font-bold text-slate-400 uppercase">Reward Name</label><input type="text" id="prog-reward" required placeholder="e.g., Pizza" class="w-full p-3 bg-slate-100 rounded-xl mt-1 text-xs font-bold outline-none"></div>
+                     <div><label class="text-[10px] font-bold text-slate-400 uppercase">Milestone (%)</label><input type="number" id="prog-milestone" required value="100" min="1" max="100" class="w-full p-3 bg-slate-100 rounded-xl mt-1 text-xs font-bold outline-none"></div>
+                </div>
+                
+                <div class="mb-5">
+                    <label class="text-[10px] font-bold text-slate-400 uppercase mb-2 block">Add Tasks/Projects</label>
+                    <div id="prog-task-list" class="max-h-40 overflow-y-auto bg-slate-50 rounded-xl p-2 border border-slate-100 space-y-2"></div>
+                </div>
+
+                <button type="submit" class="w-full py-4 bg-purple-600 text-white font-bold rounded-xl shadow-lg shadow-purple-500/30">Create Program</button>
+            </form>
+        </div>
+    </div>
+
     <div id="file-viewer-modal" class="hidden-viewer normal">
         <div class="fv-header" onclick="app.restoreFileViewer()">
             <div class="flex items-center gap-2 overflow-hidden">
@@ -363,27 +426,6 @@
         <div class="fv-content" id="fv-body"></div>
         <div class="fv-footer">
             <a href="#" target="_blank" id="fv-external-link"><i class="fas fa-external-link-alt"></i> Open in New Tab</a>
-        </div>
-    </div>
-
-    <div id="preview-overlay" class="preview-overlay" onclick="app.closePreview(event)">
-        <div class="preview-card" onclick="event.stopPropagation()">
-            <div id="preview-header" class="p-6 bg-gradient-to-r from-blue-500 to-indigo-600 text-white relative">
-                <h2 id="prev-date-num" class="text-4xl font-bold">--</h2>
-                <p id="prev-date-day" class="text-sm font-medium opacity-90 uppercase tracking-widest mt-1">--</p>
-                <button onclick="app.forceClosePreview()" class="absolute top-4 right-4 w-8 h-8 bg-white/20 rounded-full flex items-center justify-center hover:bg-white/30"><i class="fas fa-times"></i></button>
-            </div>
-            <div class="p-4 max-h-[60vh] overflow-y-auto" id="preview-list"></div>
-        </div>
-    </div>
-
-    <div class="modal-overlay" id="settings-overlay" onclick="if(event.target===this) document.getElementById('settings-overlay').classList.remove('open')">
-        <div class="modal">
-            <h3 class="text-xl font-bold text-slate-800 mb-6">Data Settings</h3>
-            <button onclick="app.exportData()" class="w-full py-4 mb-3 bg-blue-50 text-blue-600 font-bold rounded-xl flex items-center justify-center gap-2"><i class="fas fa-file-export"></i> Backup Data (JSON)</button>
-            <label class="w-full py-4 mb-6 bg-slate-50 text-slate-600 font-bold rounded-xl flex items-center justify-center gap-2 cursor-pointer"><i class="fas fa-file-import"></i> Restore Data <input type="file" class="hidden" accept=".json" onchange="app.importData(this)"></label>
-            <button onclick="if(confirm('Delete EVERYTHING?')){localStorage.clear();location.reload()}" class="w-full py-4 bg-red-50 text-red-500 font-bold rounded-xl"><i class="fas fa-trash-alt mr-2"></i> Factory Reset</button>
-            <div class="mt-8 text-center"><p class="text-[10px] font-black font-mono tracking-widest text-rose-800">MADE BY OG_ADITYAX</p></div>
         </div>
     </div>
 
@@ -573,12 +615,55 @@
         // --- 3. CORE APP ---
         const app = {
             data: [], currParent: null, 
-            files: [], 
+            files: [], programs: [],
             hierarchy: ['project','task','subtask'], 
             charts: {},
             currBlobUrl: null,
             dragSrcEl: null,
             currPreviewDate: null,
+            
+            // --- SCIENTIFIC ADVICE BANK ---
+            adviceBank: {
+                low: [
+                    {m: "The 2-Minute Rule", s: "If a task takes less than 2 minutes, do it now. It creates immediate momentum.", q: "The secret of getting ahead is getting started."},
+                    {m: "Pomodoro Technique", s: "Set a timer for 25 minutes. Focus on one task. Take a 5-minute break.", q: "It is not enough to be busy. The question is: what are we busy about?"},
+                    {m: "Eat the Frog", s: "Do your hardest task first thing in the morning when willpower is highest.", q: "If it's your job to eat a frog, it's best to do it first thing in the morning."},
+                    {m: "Zeigarnik Effect", s: "Just start. Unfinished tasks create mental tension that urges you to finish.", q: "Start where you are. Use what you have. Do what you can."},
+                    {m: "Single-Tasking", s: "Close all tabs except one. Multitasking lowers IQ by 15 points temporarily.", q: "Focus is the art of knowing what to ignore."},
+                    {m: "Environment Design", s: "Remove your phone from the room. If you can't see the distraction, you won't use it.", q: "Out of sight, out of mind."},
+                    {m: "5-Second Rule", s: "Count 5-4-3-2-1 and move before your brain creates an excuse.", q: "You are one decision away from a completely different life."},
+                    {m: "Implementation Intentions", s: "Write down exactly WHEN and WHERE you will do the task.", q: "A goal without a plan is just a wish."},
+                    {m: "Temptation Bundling", s: "Only listen to your favorite music/podcast while doing the hard work.", q: "Discipline is choosing between what you want now and what you want most."},
+                    {m: "Visual Cues", s: "Put a sticky note on your screen with the ONE thing you must do.", q: "Simplicity is the ultimate sophistication."},
+                    {m: "Micro-Habits", s: "Commit to doing just 2 minutes of the task. Often you'll keep going.", q: "Great things are not done by impulse, but by a series of small things brought together."},
+                    {m: "Digital Detox", s: "Turn on Grayscale mode on your phone to make it less addictive.", q: "Technology is a useful servant but a dangerous master."},
+                    {m: "The 'Might as Well' Effect", s: "Since you are sitting here, you 'might as well' open the document.", q: "Action is the foundational key to all success."}
+                ],
+                medium: [
+                    {m: "Parkinson's Law", s: "Work expands to fill the time available. Set artificial, tight deadlines.", q: "Work expands so as to fill the time available for its completion."},
+                    {m: "Time Blocking", s: "Assign every hour of your day a specific job. Don't leave white space.", q: "Time is what we want most, but what we use worst."},
+                    {m: "Flow State Triggers", s: "Match the challenge to your skill level. Too hard = anxiety, too easy = boredom.", q: "May the Force be with you."},
+                    {m: "Batching", s: "Group similar tasks (emails, calls) and do them all at once.", q: "Productivity is never an accident."},
+                    {m: "Biological Prime Time", s: "Track energy levels. Do analytical work when you are most alert.", q: "Know thyself."},
+                    {m: "The 80/20 Rule (Pareto)", s: "Identify the 20% of tasks that yield 80% of results. Ignore the rest.", q: "Focus on being productive instead of busy."},
+                    {m: "Deep Work", s: "Work for 90 minutes with zero distractions. No phone, no email.", q: "Clarity about what matters provides clarity about what does not."},
+                    {m: "Ultradian Rhythms", s: "Your brain can only focus intensely for 90 mins. Take a real break after.", q: "Patience is a conquering virtue."},
+                    {m: "Accountability Partner", s: "Tell a friend what you will finish by 5 PM. Social pressure works.", q: "We become what we behold."},
+                    {m: "Review & Reflect", s: "Spend 5 minutes reviewing yesterday's wins to fuel today's drive.", q: "Experience is the teacher of all things."},
+                    {m: "Ivy Lee Method", s: "Write down 6 tasks for tomorrow. Rank them. Do not move to #2 until #1 is done.", q: "Order is the sanity of the mind."}
+                ],
+                high: [
+                    {m: "Active Recovery", s: "To sustain high output, you must rest deliberately (walk, sleep, meditate).", q: "Rest is not idleness."},
+                    {m: "Law of Diminishing Returns", s: "Stop working when efficiency drops. More hours != more output.", q: "Don't burn yourself to keep others warm."},
+                    {m: "Eisenhower Matrix", s: "Delegate or delete. You are doing too much. Focus on 'Important & Not Urgent'.", q: "Efficiency is doing things right; effectiveness is doing the right things."},
+                    {m: "Essentialism", s: "If it's not a clear YES, then it's a clear NO. Protect your time.", q: "Less but better."},
+                    {m: "Kaizen", s: "Look for 1% improvements in your workflow rather than massive changes.", q: "Continuous improvement is better than delayed perfection."},
+                    {m: "Strategic Disengagement", s: "Step away from the problem to let your subconscious solve it.", q: "The answers you seek never come when the mind is busy, they come when the mind is still."},
+                    {m: "Outcome Visualization", s: "Visualize the result, not just the process, to maintain high-level motivation.", q: "Imagination is everything. It is the preview of life's coming attractions."},
+                    {m: "Gratitude Journaling", s: "High performers can become cynical. List 3 things you are grateful for.", q: "Gratitude turns what we have into enough."},
+                    {m: "Automate", s: "You are consistent. Now build systems to do the work for you.", q: "Civilization advances by extending the number of important operations which we can perform without thinking about them."}
+                ]
+            },
 
             init: () => {
                 try {
@@ -586,7 +671,9 @@
                     app.data = raw ? JSON.parse(raw) : [];
                     const rawFiles = localStorage.getItem('zenith_files');
                     app.files = rawFiles ? JSON.parse(rawFiles) : [];
-                } catch(e) { app.data = []; app.files = []; }
+                    const rawProgs = localStorage.getItem('zenith_programs');
+                    app.programs = rawProgs ? JSON.parse(rawProgs) : [];
+                } catch(e) { app.data = []; app.files = []; app.programs = []; }
                 setInterval(() => document.getElementById('ist-clock').innerText = "IST "+new Date().toLocaleTimeString('en-US',{timeZone:'Asia/Kolkata',hour12:false}), 1000);
                 app.renderList();
                 app.renderFiles(); 
@@ -609,22 +696,244 @@
                 }
                 overlay.innerHTML = html;
             },
+            
+            // New helper to get granular subtasks (leaves) only
+            getAllSubtasks: () => {
+                const leaves = [];
+                const traverse = (parentId) => {
+                    const children = app.data.filter(x => x.parentId === parentId && x.type !== 'event');
+                    if (children.length === 0) {
+                        const item = app.data.find(x => x.id === parentId);
+                        if(item && item.type !== 'event') leaves.push(item);
+                    } else {
+                        children.forEach(c => traverse(c.id));
+                    }
+                };
+                app.data.filter(x => !x.parentId && x.type !== 'event').forEach(t => traverse(t.id));
+                return leaves;
+            },
 
-            downloadReport: () => {
-                const tasks = app.data.filter(x => x.type !== 'event');
-                const total = tasks.length;
-                const completed = tasks.filter(t => t.completed).length;
-                const overdue = tasks.filter(x => !x.completed && x.deadline < app.getIST()).length;
+            // --- REPORT GENERATION WITH CHART IMAGES ---
+            generateChartImage: (type, data, options) => {
+                return new Promise((resolve) => {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = 1200; canvas.height = 600; // High Res
+                    document.getElementById('export-canvas-container').appendChild(canvas);
+                    const ctx = canvas.getContext('2d');
+                    
+                    const chart = new Chart(ctx, {
+                        type: type,
+                        data: data,
+                        options: {
+                            ...options,
+                            responsive: false,
+                            animation: false,
+                            devicePixelRatio: 2
+                        }
+                    });
+                    
+                    setTimeout(() => {
+                        const img = canvas.toDataURL('image/png');
+                        chart.destroy();
+                        canvas.remove();
+                        resolve(img);
+                    }, 100);
+                });
+            },
+
+            downloadReport: async (programId = null) => {
+                // Determine context: Global or Program
+                let tasks = [], subtasks = [], title = "PERFORMANCE REPORT";
+                
+                if (programId) {
+                    const p = app.programs.find(x => x.id === programId);
+                    if (!p) return;
+                    title = `${p.name.toUpperCase()} - REPORT`;
+                    tasks = app.data.filter(t => p.taskIds.includes(t.id)); // Roots
+                    subtasks = app.getDeepTasks(p.taskIds); // Leaves
+                } else {
+                    tasks = app.data.filter(x => x.type !== 'event');
+                    subtasks = app.getAllSubtasks();
+                }
+
+                if(subtasks.length === 0) { alert("No data to generate report."); return; }
+
+                // --- 1. DETERMINE FULL DATE RANGE (Day 1 to End) ---
+                const timestamps = subtasks.map(t => new Date(t.start || t.deadline || t.id).getTime());
+                const deadlines = subtasks.map(t => new Date(t.deadline).getTime());
+                const minTime = Math.min(...timestamps, Date.now());
+                const maxTime = Math.max(...deadlines, Date.now() + 86400000); // At least tomorrow
+                
+                const minDate = new Date(minTime);
+                const maxDate = new Date(maxTime);
+                const dates = [];
+                for (let d = new Date(minDate); d <= maxDate; d.setDate(d.getDate() + 1)) {
+                    dates.push(new Date(d).toLocaleDateString('en-CA'));
+                }
+
+                // --- 2. CALCULATE CHART DATA ---
+                // Forecast Data
+                const crunchData = dates.map(d => subtasks.filter(t => !t.completed && d >= t.start && d <= t.deadline).length);
+                const crunchCols = crunchData.map(v => v>=6?'#ef4444':v>=3?'#f59e0b':'#3b82f6');
+                
+                // Velocity Data
+                let ap=0, aa=0; const dp=[], da=[];
+                dates.forEach(d => { 
+                    ap += subtasks.filter(t => t.deadline === d).length; 
+                    dp.push(ap); 
+                    if(d <= app.getIST()) { 
+                        aa += subtasks.filter(t => t.completed && (t.completedAt ? t.completedAt.startsWith(d) : t.deadline===d)).length; 
+                        da.push(aa); 
+                    } else { da.push(null); }
+                });
+
+                // --- 3. GENERATE IMAGES ---
+                const crunchImg = await app.generateChartImage('bar', 
+                    { labels: dates, datasets: [{ data: crunchData, backgroundColor: crunchCols }] }, 
+                    { plugins: { legend: { display: false }, title: { display: true, text: 'Daily Workload (Crunch)' } } }
+                );
+
+                const velocityImg = await app.generateChartImage('line', 
+                    { labels: dates, datasets: [ { label:'Scope', data:dp, borderColor:'gray', borderDash:[5,5] }, { label:'Actual', data:da, borderColor:'#10b981', backgroundColor:'rgba(16,185,129,0.2)', fill:true } ] }, 
+                    { plugins: { title: { display: true, text: 'Velocity Burn-Up' } } }
+                );
+
+                // --- 4. TEXT STATS & ADVICE SELECTION ---
+                const completed = subtasks.filter(t => t.completed).length;
+                const total = subtasks.length;
                 const health = total > 0 ? Math.round((completed / total) * 100) : 0;
-                const remaining = tasks.filter(t => !t.completed).sort((a,b) => new Date(a.deadline) - new Date(b.deadline));
-                let advice = ""; let quote = "";
-                if(health < 50) { advice = "- Breakdown big tasks into subtasks.\n- Focus on one thing at a time."; quote = "Do not wait to strike till the iron is hot; but make it hot by striking. - W.B. Yeats"; } 
-                else if(health > 80) { advice = "- You are crushing it. Maybe increase the difficulty?"; quote = "We are what we repeatedly do. Excellence, then, is not an act, but a habit. - Aristotle"; } 
-                else { advice = "- Good flow. Try to clear the backlog this weekend."; quote = "Success is the sum of small efforts, repeated day in and day out. - Robert Collier"; }
-                const report = `ZENITH GLORIOUS - PERFORMANCE REPORT\n--------------------------------------\nGenerated: ${app.getIST()}\nTime: ${new Date().toLocaleTimeString()}\n\n[ KEY METRICS ]\nTotal Tasks: ${total}\nCompleted: ${completed}\nRate: ${health}%\nOverdue: ${overdue}\n\n[ ADVICE ]\n${advice}\n\n[ PENDING WORK ]\n${remaining.slice(0, 15).map(t => `- [ ] ${t.title} (${t.deadline}) [${t.priority}]`).join('\n') || "No pending work!"}\n\n"${quote}"\n\nSigned,\nOG_ADITYAX`;
-                const blob = new Blob([report], {type: 'text/plain'});
+                
+                let advice = {};
+                if (health < 50) {
+                    const idx = Math.floor(Math.random() * app.adviceBank.low.length);
+                    advice = app.adviceBank.low[idx];
+                } else if (health < 80) {
+                    const idx = Math.floor(Math.random() * app.adviceBank.medium.length);
+                    advice = app.adviceBank.medium[idx];
+                } else {
+                    const idx = Math.floor(Math.random() * app.adviceBank.high.length);
+                    advice = app.adviceBank.high[idx];
+                }
+                
+                const pendingHigh = subtasks.filter(t => !t.completed && t.priority === 'High').sort((a,b) => new Date(a.deadline) - new Date(b.deadline));
+                const pendingMed = subtasks.filter(t => !t.completed && t.priority === 'Medium').sort((a,b) => new Date(a.deadline) - new Date(b.deadline));
+                const pendingLow = subtasks.filter(t => !t.completed && t.priority === 'Low').sort((a,b) => new Date(a.deadline) - new Date(b.deadline));
+
+                // --- 5. BUILD HTML ---
+                const htmlContent = `
+                    <!DOCTYPE html>
+                    <html lang="en">
+                    <head>
+                        <meta charset="UTF-8"> <meta name="viewport" content="width=device-width, initial-scale=1.0"> <title>${title}</title>
+                        <style>
+                            :root { --primary: #2563eb; --slate-800: #1e293b; --slate-600: #475569; --slate-100: #f1f5f9; }
+                            body { font-family: 'Inter', -apple-system, sans-serif; background: #f8fafc; color: var(--slate-800); margin: 0; padding: 20px; line-height: 1.6; }
+                            .container { max-width: 800px; margin: 0 auto; }
+                            
+                            /* Header */
+                            header { text-align: center; margin-bottom: 40px; padding-bottom: 20px; border-bottom: 1px solid #e2e8f0; }
+                            h1 { font-size: clamp(24px, 5vw, 32px); margin: 0; letter-spacing: -0.03em; font-weight: 900; }
+                            .meta { font-size: 12px; color: #94a3b8; font-family: monospace; text-transform: uppercase; letter-spacing: 1px; margin-top: 10px; }
+                            
+                            /* Section Titles */
+                            h2 { font-size: 14px; text-transform: uppercase; letter-spacing: 1px; color: #64748b; margin-top: 40px; margin-bottom: 15px; font-weight: 800; border-left: 4px solid #3b82f6; padding-left: 10px; }
+
+                            /* Stats Grid - Responsive */
+                            .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 15px; margin-bottom: 30px; }
+                            .stat { background: white; padding: 20px; border-radius: 16px; text-align: center; border: 1px solid #e2e8f0; box-shadow: 0 2px 4px rgba(0,0,0,0.03); }
+                            .stat-val { font-size: clamp(24px, 4vw, 32px); font-weight: 900; color: #3b82f6; line-height: 1; }
+                            .stat-lbl { font-size: 10px; font-weight: 700; text-transform: uppercase; color: #94a3b8; letter-spacing: 1px; margin-top: 8px; }
+                            
+                            /* Cards */
+                            .card { background: white; border-radius: 16px; padding: 20px; box-shadow: 0 4px 10px -1px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; margin-bottom: 20px; }
+                            
+                            /* Advice Box */
+                            .advice-box { background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border: 1px solid #bae6fd; border-left: 5px solid #0284c7; }
+                            .advice-method { font-weight: 900; color: #0369a1; font-size: 18px; margin-bottom: 8px; }
+                            .advice-text { color: #334155; font-size: 15px; margin-bottom: 15px; }
+                            .advice-quote { font-style: italic; color: #64748b; font-size: 13px; padding-top: 10px; border-top: 1px solid rgba(0,0,0,0.05); }
+
+                            /* Graph Titles */
+                            .graph-title { font-size: 20px; font-weight: 800; color: #1e293b; text-align: center; margin-bottom: 15px; }
+                            
+                            /* Images */
+                            img { width: 100%; height: auto; border-radius: 8px; display: block; }
+                            
+                            /* Lists */
+                            ul { padding: 0; list-style: none; margin: 0; }
+                            li { padding: 12px 0; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: flex-start; font-size: 14px; gap: 10px; }
+                            li:last-child { border-bottom: none; }
+                            .task-name { font-weight: 500; color: #334155; word-break: break-word; }
+                            .badge { padding: 4px 8px; border-radius: 6px; font-size: 10px; font-weight: bold; background: #f1f5f9; color: #64748b; font-family: monospace; white-space: nowrap; flex-shrink: 0; }
+                            .empty-msg { color: #cbd5e1; font-style: italic; text-align: center; padding: 10px; }
+
+                            /* Footer */
+                            .footer { margin-top: 60px; text-align: center; font-size: 10px; color: #cbd5e1; font-weight: 900; letter-spacing: 2px; }
+                            
+                            /* Mobile Adjustments */
+                            @media (max-width: 600px) {
+                                body { padding: 15px; }
+                                .stat-grid { grid-template-columns: 1fr 1fr; }
+                                li { flex-direction: column; align-items: flex-start; gap: 5px; }
+                                .badge { align-self: flex-start; }
+                            }
+                        </style>
+                    </head>
+                    <body>
+                        <div class="container">
+                            <header>
+                                <h1>${title}</h1>
+                                <div class="meta">GENERATED: ${app.getIST()} | ZENITH GLORIOUS 🚀</div>
+                            </header>
+                            
+                            <div class="stat-grid">
+                                <div class="stat"><div class="stat-val">${health}%</div><div class="stat-lbl">Productivity</div></div>
+                                <div class="stat"><div class="stat-val">${total}</div><div class="stat-lbl">Total Items</div></div>
+                                <div class="stat"><div class="stat-val">${completed}</div><div class="stat-lbl">Finished</div></div>
+                                <div class="stat"><div class="stat-val">${total - completed}</div><div class="stat-lbl">Remaining</div></div>
+                            </div>
+
+                            <h2>💡 Intelligent Guidance</h2>
+                            <div class="card advice-box">
+                                <div class="advice-method">Method: ${advice.m}</div>
+                                <div class="advice-text">${advice.s}</div>
+                                <div class="advice-quote">"${advice.q}"</div>
+                            </div>
+
+                            <h2>📊 Visual Analysis</h2>
+                            <div class="card">
+                                <div class="graph-title">Workload Forecast</div>
+                                <img src="${crunchImg}" alt="Exam Crunch Graph">
+                            </div>
+                            <div class="card">
+                                <div class="graph-title">Velocity Burn-Up</div>
+                                <img src="${velocityImg}" alt="Velocity Burn-Up Graph">
+                            </div>
+
+                            <h2>🔥 Pending Work (High Priority)</h2>
+                            <div class="card">
+                                <ul>${pendingHigh.length ? pendingHigh.map(t => `<li><span class="task-name">◻️ ${t.title}</span><span class="badge">${t.deadline}</span></li>`).join('') : '<div class="empty-msg">No tasks found.</div>'}</ul>
+                            </div>
+
+                            <h2>⚡ Pending Work (Medium Priority)</h2>
+                            <div class="card">
+                                <ul>${pendingMed.length ? pendingMed.map(t => `<li><span class="task-name">◻️ ${t.title}</span><span class="badge">${t.deadline}</span></li>`).join('') : '<div class="empty-msg">No tasks found.</div>'}</ul>
+                            </div>
+
+                            <h2>💧 Pending Work (Low Priority)</h2>
+                            <div class="card">
+                                <ul>${pendingLow.length ? pendingLow.map(t => `<li><span class="task-name">◻️ ${t.title}</span><span class="badge">${t.deadline}</span></li>`).join('') : '<div class="empty-msg">No tasks found.</div>'}</ul>
+                            </div>
+
+                            <div class="footer">MADE BY OG_ADITYAX</div>
+                        </div>
+                    </body>
+                    </html>
+                `;
+
+                const blob = new Blob([htmlContent], {type: 'text/html;charset=utf-8'});
                 const url = URL.createObjectURL(blob);
-                const a = document.createElement('a'); a.href = url; a.download = `Report_${app.getIST()}.txt`; a.click();
+                const a = document.createElement('a'); a.href = url; a.download = `Zenith_Report_${app.getIST()}.html`; a.click();
             },
 
             saveFiles: () => localStorage.setItem('zenith_files', JSON.stringify(app.files)),
@@ -711,8 +1020,8 @@
             handleDragEnd: (e) => { app.dragSrcEl = null; document.querySelectorAll('.draggable-item').forEach(i => { i.classList.remove('drag-over'); i.classList.remove('dragging'); }); app.renderList(); },
 
             openSettings: () => document.getElementById('settings-overlay').classList.add('open'),
-            exportData: () => { const b = { tasks: app.data, journal: journal.data, files: app.files }; const u = URL.createObjectURL(new Blob([JSON.stringify(b)], {type: 'application/json'})); const a = document.createElement('a'); a.href = u; a.download = `zenith_backup_${app.getIST()}.json`; a.click(); },
-            importData: (input) => { const r = new FileReader(); r.onload = (e) => { try { const d = JSON.parse(e.target.result); if(d.tasks) localStorage.setItem('zenith_minimal_v1', JSON.stringify(d.tasks)); if(d.journal) localStorage.setItem('zenith_minimal_journal', JSON.stringify(d.journal)); if(d.files) localStorage.setItem('zenith_files', JSON.stringify(d.files)); location.reload(); } catch(err) { alert("Invalid File"); } }; r.readAsText(input.files[0]); },
+            exportData: () => { const b = { tasks: app.data, journal: journal.data, files: app.files, programs: app.programs }; const u = URL.createObjectURL(new Blob([JSON.stringify(b)], {type: 'application/json'})); const a = document.createElement('a'); a.href = u; a.download = `zenith_backup_${app.getIST()}.json`; a.click(); },
+            importData: (input) => { const r = new FileReader(); r.onload = (e) => { try { const d = JSON.parse(e.target.result); if(d.tasks) localStorage.setItem('zenith_minimal_v1', JSON.stringify(d.tasks)); if(d.journal) localStorage.setItem('zenith_minimal_journal', JSON.stringify(d.journal)); if(d.files) localStorage.setItem('zenith_files', JSON.stringify(d.files)); if(d.programs) localStorage.setItem('zenith_programs', JSON.stringify(d.programs)); location.reload(); } catch(err) { alert("Invalid File"); } }; r.readAsText(input.files[0]); },
             getIST: () => new Date().toLocaleDateString('en-CA', {timeZone: 'Asia/Kolkata'}),
             save: () => localStorage.setItem('zenith_minimal_v1', JSON.stringify(app.data)),
             getLevel: (pid) => { if(!pid) return 'project'; const p=app.data.find(x=>x.id===pid); if(!p || p.type==='event') return 'subtask'; const i=app.hierarchy.indexOf(p.type); return (i!==-1 && i<app.hierarchy.length-1)?app.hierarchy[i+1]:'subtask'; },
@@ -869,6 +1178,7 @@
 
             renderStats: () => {
                 const tasks = app.data.filter(x => x.type !== 'event');
+                const subtasks = app.getAllSubtasks(); // Granular data for stats
                 const total = tasks.length; const done = tasks.filter(x=>x.completed).length;
                 const overdue = tasks.filter(x=>!x.completed && x.deadline < app.getIST()).length;
                 let health = total>0 ? Math.max(0, Math.min(100, Math.round(((done-(overdue*1.5))/total)*100))) : 100;
@@ -885,16 +1195,239 @@
                     if(velocity > 0 && activeLoad > 0) { const daysLeft = Math.ceil(activeLoad / velocity); const endD = new Date(); endD.setDate(endD.getDate() + daysLeft); document.getElementById('stat-prediction').innerText = endD.toLocaleDateString('en-US',{month:'short',day:'numeric'}); } 
                     else if (activeLoad === 0) { document.getElementById('stat-prediction').innerText = "All Done!"; } else { document.getElementById('stat-prediction').innerText = "Stalled"; }
                 } else if (total > 0) { document.getElementById('stat-prediction').innerText = "Start Working"; } else { document.getElementById('stat-prediction').innerText = "No Tasks"; }
+                
+                // --- FORECAST CHART (USING SUBTASKS) ---
                 const dates = []; let c = new Date(2025, 11, 31); const e = new Date(2026, 2, 15);
                 while(c<=e) { dates.push(c.toLocaleDateString('en-CA')); c.setDate(c.getDate()+1); }
-                const crunchData = dates.map(d => tasks.filter(t => !t.completed && d >= t.start && d <= t.deadline).length);
+                const crunchData = dates.map(d => subtasks.filter(t => !t.completed && d >= t.start && d <= t.deadline).length);
                 const crunchCols = crunchData.map(v => v>=6?'#ef4444':v>=3?'#f59e0b':'#3b82f6');
                 document.getElementById('forecast-wrapper').style.width = Math.max(dates.length*15, 300)+'px';
                 app.renderChart('chart-forecast', 'bar', { labels: dates.map(d=>d.slice(5)), datasets: [{ data: crunchData, backgroundColor: crunchCols, borderRadius: 3 }] }, { scales: {x:{display:false}, y:{display:false}}, plugins:{legend:{display:false}} });
+                
+                // --- VELOCITY CHART ---
                 let ap=0, aa=0; const dp=[], da=[];
                 dates.forEach(d => { ap += tasks.filter(t => t.deadline === d).length; dp.push(ap); if(d <= app.getIST()) { aa += tasks.filter(t => t.completed && (t.completedAt ? t.completedAt.startsWith(d) : t.deadline===d)).length; da.push(aa); } });
                 app.renderChart('chart-velocity', 'line', { labels: dates.map(d=>d.slice(5)), datasets: [ { label:'Scope', data:dp, borderColor:'rgba(0,0,0,0.2)', borderDash:[3,3], pointRadius:0 }, { label:'Actual', data:da, borderColor:'#10b981', backgroundColor:'rgba(16,185,129,0.1)', fill:true, pointRadius:0 } ] }, { scales: {x:{display:false}, y:{display:false}}, plugins:{legend:{display:false}} });
+                
+                // RENDER PROGRAMS
+                app.renderPrograms();
             },
+
+            // --- PROGRAMS LOGIC ---
+            openProgramModal: () => {
+                document.getElementById('program-modal-overlay').classList.add('open');
+                document.getElementById('prog-name').value = '';
+                document.getElementById('prog-reward').value = '';
+                document.getElementById('prog-milestone').value = '100';
+                
+                const list = document.getElementById('prog-task-list');
+                list.innerHTML = '';
+                const tasks = app.data.filter(x => x.type !== 'event');
+                if(tasks.length === 0) { list.innerHTML = '<div class="text-xs text-slate-400 p-2">No tasks available.</div>'; return; }
+                
+                tasks.forEach(t => {
+                    list.innerHTML += `
+                        <label class="relative block cursor-pointer">
+                            <input type="checkbox" name="prog-tasks" value="${t.id}" class="prog-check hidden peer">
+                            <div class="flex items-center gap-3 p-2 rounded-lg bg-white border border-slate-200 transition-colors">
+                                <div class="w-4 h-4 rounded border border-slate-300 flex items-center justify-center text-blue-500 check-icon hidden"><i class="fas fa-check text-[10px]"></i></div>
+                                <div class="flex-1 truncate">
+                                    <div class="text-xs font-bold text-slate-700 truncate">${t.title}</div>
+                                    <div class="text-[9px] text-slate-400">${t.type}</div>
+                                </div>
+                            </div>
+                        </label>
+                    `;
+                });
+            },
+
+            handleProgramSave: (e) => {
+                e.preventDefault();
+                const name = document.getElementById('prog-name').value;
+                const reward = document.getElementById('prog-reward').value;
+                const milestone = parseInt(document.getElementById('prog-milestone').value);
+                const checks = document.querySelectorAll('input[name="prog-tasks"]:checked');
+                const taskIds = Array.from(checks).map(c => c.value);
+
+                if(taskIds.length === 0) { alert("Select at least one task!"); return; }
+
+                app.programs.push({
+                    id: Date.now().toString(),
+                    name: name,
+                    reward: reward,
+                    milestone: milestone,
+                    taskIds: taskIds
+                });
+                
+                localStorage.setItem('zenith_programs', JSON.stringify(app.programs));
+                document.getElementById('program-modal-overlay').classList.remove('open');
+                app.renderStats();
+            },
+
+            delProgram: (id) => {
+                if(confirm("Delete Program? Tasks will remain safe.")) {
+                    app.programs = app.programs.filter(p => p.id !== id);
+                    localStorage.setItem('zenith_programs', JSON.stringify(app.programs));
+                    app.renderStats();
+                }
+            },
+            
+            // New recursive logic to get ALL sub-tasks (leaves) from a list of parent IDs
+            getDeepTasks: (rootIds) => {
+                const leaves = [];
+                const traverse = (id) => {
+                    const children = app.data.filter(x => x.parentId === id);
+                    if(children.length === 0) {
+                        const item = app.data.find(x => x.id === id);
+                        if(item && item.type !== 'event') leaves.push(item);
+                    } else {
+                        children.forEach(c => traverse(c.id));
+                    }
+                };
+                rootIds.forEach(id => traverse(id));
+                return [...new Set(leaves)]; // Remove dupes just in case
+            },
+
+            renderPrograms: () => {
+                const container = document.getElementById('programs-list');
+                if(app.programs.length === 0) { container.innerHTML = '<div class="text-xs text-slate-400 italic p-2 w-full text-center">No active programs. Tap + to start.</div>'; return; }
+                
+                container.innerHTML = '';
+                app.programs.forEach(p => {
+                    const deepTasks = app.getDeepTasks(p.taskIds);
+                    const total = deepTasks.length;
+                    const done = deepTasks.filter(t => t.completed).length;
+                    const pct = total === 0 ? 0 : Math.round((done / total) * 100);
+                    const isUnlocked = pct >= p.milestone;
+
+                    container.innerHTML += `
+                        <div onclick="app.openProgramPreview('${p.id}')" class="min-w-[200px] bg-white border border-slate-200 rounded-2xl p-4 relative snap-start shadow-sm flex flex-col justify-between cursor-pointer active:scale-95 transition-transform">
+                            <div>
+                                <div class="flex justify-between items-start mb-2">
+                                    <h4 class="font-bold text-slate-700 text-sm truncate w-24">${p.name}</h4>
+                                    <div class="flex items-center gap-1">
+                                        <button onclick="event.stopPropagation(); app.downloadReport('${p.id}')" class="text-slate-300 hover:text-blue-500 w-6 h-6 flex items-center justify-center rounded-full hover:bg-slate-50"><i class="fas fa-file-alt text-xs"></i></button>
+                                        <button onclick="event.stopPropagation(); app.delProgram('${p.id}')" class="text-slate-300 hover:text-red-500 w-6 h-6 flex items-center justify-center rounded-full hover:bg-slate-50"><i class="fas fa-trash text-xs"></i></button>
+                                    </div>
+                                </div>
+                                <div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden mb-2">
+                                    <div class="h-full bg-purple-500 transition-all duration-500" style="width: ${pct}%"></div>
+                                </div>
+                                <div class="flex justify-between text-[10px] text-slate-400 font-bold mb-3">
+                                    <span>${pct}% Done</span>
+                                    <span>Goal: ${p.milestone}%</span>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-2 ${isUnlocked ? 'text-emerald-600' : 'text-slate-400'}">
+                                <div class="w-8 h-8 rounded-full ${isUnlocked ? 'bg-emerald-100' : 'bg-slate-100'} flex items-center justify-center text-lg">
+                                    <i class="fas ${isUnlocked ? 'fa-gift' : 'fa-lock'}"></i>
+                                </div>
+                                <div class="flex-1">
+                                    <div class="text-[9px] font-bold uppercase tracking-wider">Reward</div>
+                                    <div class="text-xs font-bold truncate ${isUnlocked ? 'glorious-text' : ''}">${p.reward}</div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+            },
+            
+            openProgramPreview: (id) => {
+                const p = app.programs.find(x => x.id === id); if(!p) return;
+                const deepTasks = app.getDeepTasks(p.taskIds);
+                
+                // Calculate Scoped Stats
+                const total = deepTasks.length;
+                const done = deepTasks.filter(x => x.completed).length;
+                const overdue = deepTasks.filter(x => !x.completed && x.deadline < app.getIST()).length;
+                let health = total>0 ? Math.max(0, Math.min(100, Math.round(((done-(overdue*1.5))/total)*100))) : 100;
+                const activeLoad = total - done;
+                
+                // Prediction Logic
+                let prediction = "No Tasks";
+                if(total > 0 && done > 0) {
+                     // Basic Velocity: just use the global start time for simplicity or finding min start date of these tasks
+                     const startTimes = deepTasks.map(t => new Date(t.start || t.id)).sort((a,b)=>a-b);
+                     const first = startTimes[0] || new Date();
+                     const now = new Date();
+                     const daysActive = Math.max(1, (now - first)/(1000*60*60*24));
+                     const velocity = done / daysActive; // tasks per day
+                     if(velocity > 0 && activeLoad > 0) {
+                         const daysLeft = Math.ceil(activeLoad / velocity);
+                         const endD = new Date(); endD.setDate(endD.getDate() + daysLeft);
+                         prediction = endD.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+                     } else if (activeLoad === 0) prediction = "Done!"; else prediction = "Stalled";
+                } else if(total > 0) prediction = "Start!";
+
+                // Prepare HTML for Overlay
+                document.getElementById('prev-date-num').innerText = p.name;
+                document.getElementById('prev-date-day').innerText = `${done}/${total} Subtasks • ${Math.round((done/total)*100)||0}%`;
+                
+                const list = document.getElementById('preview-list');
+                
+                // Construct Mini-Dashboard HTML
+                list.innerHTML = `
+                    <div class="grid grid-cols-2 gap-3 mb-4">
+                        <div class="bg-indigo-50 p-4 rounded-2xl">
+                            <div class="text-[10px] font-bold text-indigo-400 uppercase">Productivity</div>
+                            <div class="text-3xl font-black text-indigo-700">${health}%</div>
+                        </div>
+                        <div class="bg-indigo-50 p-4 rounded-2xl">
+                            <div class="text-[10px] font-bold text-indigo-400 uppercase">Est. Finish</div>
+                            <div class="text-lg font-bold text-indigo-700 truncate">${prediction}</div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white border border-slate-100 p-4 rounded-2xl mb-4 shadow-sm">
+                        <div class="flex justify-between items-center mb-2">
+                            <h3 class="font-bold text-slate-700 text-xs">Velocity Burn-Up (Scoped)</h3>
+                        </div>
+                        <div style="height: 120px; position: relative;"><canvas id="chart-prog-velocity"></canvas></div>
+                    </div>
+
+                    <h3 class="font-bold text-slate-400 text-xs uppercase tracking-widest mb-2">Included Items</h3>
+                    <div class="space-y-2 pb-10">
+                        ${deepTasks.map(t => `
+                            <div class="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-100">
+                                <div class="w-4 h-4 rounded-full border-2 ${t.completed?'bg-green-500 border-green-500':'border-slate-300'} flex items-center justify-center">
+                                    ${t.completed?'<i class="fas fa-check text-[8px] text-white"></i>':''}
+                                </div>
+                                <div class="flex-1 truncate">
+                                    <div class="text-xs font-bold text-slate-700 truncate ${t.completed?'line-through text-slate-400':''}">${t.title}</div>
+                                    <div class="text-[9px] text-slate-400">${t.deadline}</div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+                
+                document.getElementById('preview-overlay').classList.add('active');
+
+                // Render Scoped Chart
+                const dates = []; let c = new Date(2025, 11, 31); const e = new Date(2026, 2, 15);
+                while(c<=e) { dates.push(c.toLocaleDateString('en-CA')); c.setDate(c.getDate()+1); }
+                
+                let ap=0, aa=0; const dp=[], da=[];
+                dates.forEach(d => { 
+                    ap += deepTasks.filter(t => t.deadline === d).length; 
+                    dp.push(ap); 
+                    if(d <= app.getIST()) { 
+                        aa += deepTasks.filter(t => t.completed && (t.completedAt ? t.completedAt.startsWith(d) : t.deadline===d)).length; 
+                        da.push(aa); 
+                    } 
+                });
+
+                setTimeout(() => {
+                    app.renderChart('chart-prog-velocity', 'line', { 
+                        labels: dates.map(d=>d.slice(5)), 
+                        datasets: [ 
+                            { label:'Scope', data:dp, borderColor:'rgba(0,0,0,0.2)', borderDash:[3,3], pointRadius:0 }, 
+                            { label:'Actual', data:da, borderColor:'#6366f1', backgroundColor:'rgba(99,102,241,0.1)', fill:true, pointRadius:0 } 
+                        ] 
+                    }, { scales: {x:{display:false}, y:{display:false}}, plugins:{legend:{display:false}} });
+                }, 100);
+            },
+
             renderChart: (id, type, data, opts) => { const ctx = document.getElementById(id); if(!ctx) return; if(app.charts[id]) app.charts[id].destroy(); app.charts[id] = new Chart(ctx, {type, data, options: { ...opts, responsive: true, maintainAspectRatio: false }}); },
             setMode: (m) => { document.getElementById('inp-type').value = m; if(m==='task'){document.getElementById('field-priority').classList.remove('hidden'); document.getElementById('field-start').classList.remove('hidden'); document.getElementById('field-end').classList.remove('col-span-2');} else {document.getElementById('field-priority').classList.add('hidden'); document.getElementById('field-start').classList.add('hidden'); document.getElementById('field-end').classList.add('col-span-2');} },
             openModal: (mode, id) => { document.getElementById('modal-overlay').classList.add('open'); app.setMode('task'); if(mode==='create'){ document.getElementById('inp-id').value=''; document.getElementById('inp-start').value = app.getIST(); document.getElementById('inp-end').value = app.getIST(); document.getElementById('modal-title').innerText="New " + app.getLevel(app.currParent).toUpperCase(); } else { const i = app.data.find(x => x.id === id); document.getElementById('inp-id').value = i.id; document.getElementById('inp-title').value = i.title; if(i.type==='event') app.setMode('event'); else app.setMode('task'); } },
