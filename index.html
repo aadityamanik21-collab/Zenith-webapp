@@ -1,0 +1,926 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#f8fafc">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="mobile-web-app-capable" content="yes">
+    <title>Zenith Glorious</title>
+    
+    <link rel="manifest" href="manifest.json">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@500;800&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'], mono: ['JetBrains Mono', 'monospace'] },
+                    colors: { glass: 'rgba(255, 255, 255, 0.7)', glassBorder: 'rgba(255, 255, 255, 0.5)' }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* --- CORE RESET & LAYOUT --- */
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        
+        body { 
+            background: #f8fafc;
+            background-image: 
+                radial-gradient(at 0% 0%, hsla(210, 40%, 96%, 1) 0, transparent 50%), 
+                radial-gradient(at 50% 0%, hsla(220, 30%, 94%, 1) 0, transparent 50%);
+            height: 100vh;
+            height: 100dvh; 
+            overflow-y: auto; overflow-x: hidden;
+            color: #0f172a; position: relative;
+            padding-bottom: 120px;
+        }
+
+        /* --- CROSS-BROWSER SCROLLBAR HIDING --- */
+        .scroller { overflow-x: auto; padding-bottom: 5px; scrollbar-width: none; -ms-overflow-style: none; }
+        .scroller::-webkit-scrollbar { display: none; }
+
+        /* --- DRAG & DROP STYLES --- */
+        .draggable-item { cursor: grab; user-select: none; -webkit-user-select: none; transition: transform 0.2s, box-shadow 0.2s; }
+        .draggable-item.dragging { opacity: 0.5; transform: scale(0.98); box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); cursor: grabbing; border: 2px dashed #3b82f6; }
+        .drag-over { border-top: 3px solid #3b82f6; }
+
+        /* --- INPUT STANDARDIZATION --- */
+        input[type="date"], input[type="time"], input[type="text"] {
+            -webkit-appearance: none; appearance: none;
+        }
+
+        /* --- ENHANCED SEASONAL ANIMATIONS --- */
+        #season-overlay { position: fixed; inset: 0; pointer-events: none; z-index: 60; overflow: hidden; }
+        
+        .snowflake { position: absolute; top: -30px; color: #bae6fd; text-shadow: 0 0 5px rgba(186, 230, 253, 0.5); user-select: none; animation: snow-fall linear infinite; }
+        @keyframes snow-fall { 0% { transform: translateY(0) translateX(0) rotate(0deg); opacity: 0; } 10% { opacity: 1; } 100% { transform: translateY(110vh) translateX(20px) rotate(20deg); opacity: 0.6; } }
+        
+        .petal { position: absolute; top: -30px; user-select: none; filter: drop-shadow(0 2px 3px rgba(244, 114, 182, 0.2)); animation: petal-fall linear infinite; }
+        @keyframes petal-fall { 0% { transform: translateY(0) rotate(0deg) translateX(0); opacity: 0; } 10% { opacity: 1; } 100% { transform: translateY(110vh) rotate(360deg) translateX(-30px); opacity: 0; } }
+        
+        .leaf { position: absolute; top: -30px; user-select: none; filter: drop-shadow(0 2px 2px rgba(234, 88, 12, 0.2)); animation: leaf-fall linear infinite; }
+        @keyframes leaf-fall { 0% { transform: translateY(0) rotate(0deg) translateX(0); opacity: 0; } 25% { transform: translateY(30vh) rotate(45deg) translateX(30px); } 50% { transform: translateY(60vh) rotate(90deg) translateX(0px); } 75% { transform: translateY(85vh) rotate(135deg) translateX(-30px); } 100% { transform: translateY(115vh) rotate(180deg) translateX(0); opacity: 0; } }
+
+        .heat-haze { position: absolute; inset: 0; background: linear-gradient(to bottom, rgba(253, 224, 71, 0.15), rgba(249, 115, 22, 0.1)); mix-blend-mode: multiply; animation: pulse-heat 5s ease-in-out infinite; }
+        .the-sun { position: absolute; top: -40px; right: -40px; font-size: 150px; opacity: 0.4; animation: sun-spin 60s linear infinite; filter: blur(8px); color: #f59e0b; }
+        @keyframes pulse-heat { 0%, 100% { opacity: 0.4; } 50% { opacity: 0.7; } }
+        @keyframes sun-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+        /* --- TYPOGRAPHY EFFECTS --- */
+        .glorious-text {
+            background: linear-gradient(110deg, #14532d 0%, #166534 25%, #84cc16 50%, #166534 75%, #14532d 100%);
+            background-size: 200% auto;
+            -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+            animation: shine 4s linear infinite; filter: drop-shadow(0 2px 4px rgba(22, 101, 52, 0.15));
+            letter-spacing: -0.04em;
+        }
+        @keyframes shine { to { background-position: 200% center; } }
+
+        /* --- GLASSMORPHISM --- */
+        .glass {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
+            border-radius: 20px; position: relative; z-index: 10;
+        }
+        
+        .glass-nav {
+            background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            border-top: 1px solid rgba(0,0,0,0.05); z-index: 40;
+        }
+        
+        .bottom-nav { z-index: 70; }
+
+        /* --- CALENDAR --- */
+        .cal-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(105px, 1fr)); gap: 8px; }
+        
+        .cal-day-box {
+            background: rgba(255,255,255,0.6); border: 1px solid rgba(255,255,255,0.7);
+            border-radius: 14px; padding: 8px; height: 150px; 
+            display: flex; flex-direction: column; justify-content: space-between;
+            position: relative; overflow: hidden;
+        }
+        .is-today { border: 2px solid #3b82f6; background: white; }
+        .cal-slots { display: flex; flex-direction: column; gap: 3px; flex: 1; overflow: hidden; }
+        .slot {
+            height: 16px; border-radius: 4px; font-size: 9px; font-weight: 700;
+            display: flex; align-items: center; padding: 0 4px; color: white;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .slot-empty { background: rgba(0,0,0,0.05); }
+        
+        .tap-scale { transition: transform 0.1s; } .tap-scale:active { transform: scale(0.96); }
+        .nav-btn { transition: color 0.2s; } .nav-btn.active { color: #2563eb; }
+        .nav-indicator { position: absolute; bottom: 0; left: 50%; transform: translateX(-50%) scaleX(0); width: 24px; height: 3px; background: #2563eb; border-radius: 10px; transition: transform 0.2s; }
+        .nav-btn.active .nav-indicator { transform: translateX(-50%) scaleX(1); }
+        .bento-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; } .bento-wide { grid-column: span 2; }
+
+        /* --- MODALS & OVERLAYS --- */
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px); z-index: 110; display: none; align-items: flex-end; }
+        .modal-overlay.open { display: flex; }
+        .modal { width: 100%; background: #fff; border-radius: 24px 24px 0 0; padding: 24px; animation: slideUp 0.3s cubic-bezier(0.2, 0.8, 0.2, 1); max-height: 90vh; overflow-y: auto; }
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        
+        .fab { position: fixed; bottom: 100px; right: 24px; width: 60px; height: 60px; background: #2563eb; color: white; border-radius: 20px; display: flex; align-items: center; justify-content: center; font-size: 24px; box-shadow: 0 12px 30px -8px rgba(37, 99, 235, 0.5); z-index: 50; transition: transform 0.2s; }
+        .fab:active { transform: scale(0.9) rotate(90deg); }
+
+        .preview-overlay {
+            position: fixed; inset: 0; z-index: 100;
+            background: rgba(0,0,0,0.4); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+            display: flex; align-items: center; justify-content: center;
+            opacity: 0; pointer-events: none; transition: opacity 0.2s;
+        }
+        .preview-overlay.active { opacity: 1; pointer-events: auto; }
+        .preview-card {
+            width: 85%; max-width: 340px; background: white;
+            border-radius: 24px; overflow: hidden;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.2);
+            transform: scale(0.9) translateY(20px); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .preview-overlay.active .preview-card { transform: scale(1) translateY(0); }
+
+        /* --- FILE VIEWER STYLES --- */
+        #file-viewer-modal { position: fixed; z-index: 200; display: flex; flex-direction: column; background: white; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); overflow: hidden; border: 1px solid #e2e8f0; }
+        #file-viewer-modal.hidden-viewer { display: none !important; pointer-events: none; opacity: 0; transform: scale(0.95); }
+        #file-viewer-modal.normal { inset: 5% 5% 20% 5%; border-radius: 16px; opacity: 1; pointer-events: auto; display: flex; }
+        #file-viewer-modal.maximized { inset: 0; border-radius: 0; opacity: 1; pointer-events: auto; z-index: 300; display: flex; }
+        #file-viewer-modal.minimized { inset: auto 20px 100px auto; width: 200px; height: 48px; border-radius: 12px; opacity: 1; pointer-events: auto; display: flex; border: 2px solid #3b82f6; }
+        #file-viewer-modal.minimized .fv-content { display: none; }
+        #file-viewer-modal.minimized .fv-header { background: #eff6ff; }
+        #file-viewer-modal.minimized .fv-footer { display: none; }
+        #file-viewer-modal.minimized .fv-controls .btn-min { display: none; }
+
+        .fv-header { height: 48px; padding: 0 16px; display: flex; align-items: center; justify-content: space-between; background: #f8fafc; border-bottom: 1px solid #e2e8f0; cursor: pointer; flex-shrink: 0; }
+        .fv-content { flex: 1; position: relative; background: #334155; overflow: hidden; display: flex; flex-direction: column; }
+        .fv-content img { width: 100%; height: 100%; object-fit: contain; }
+        .fv-content object { width: 100%; height: 100%; border: none; background: white; flex: 1; }
+        .fv-footer { height: 40px; background: #eff6ff; border-top: 1px solid #dbeafe; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .fv-footer a { color: #2563eb; font-size: 11px; font-weight: 700; text-transform: uppercase; text-decoration: none; display: flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 6px; background: white; border: 1px solid #bfdbfe; }
+        .fv-footer a:active { background: #dbeafe; }
+
+        .journal-bubble { width: 40px; height: 40px; min-width: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; background: white; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+        .note-img-wrapper { position: relative; width: 60px; height: 60px; display: inline-block; margin-right: 8px; }
+        .note-img { width: 100%; height: 100%; border-radius: 12px; object-fit: cover; border: 2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .note-remove-btn { position: absolute; top: -5px; right: -5px; width: 18px; height: 18px; background: #ef4444; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; cursor: pointer; border: 2px solid white; }
+    
+        .bg-High { background: #ef4444; } .bg-Medium { background: #f59e0b; } .bg-Low { background: #3b82f6; }
+        .bg-Event { background: linear-gradient(135deg, #6366f1, #8b5cf6); }
+        
+        .file-item { border: 1px solid #f1f5f9; transition: all 0.2s; }
+        .file-item:active { background: #f8fafc; transform: scale(0.98); }
+
+        #j-editor { min-height: 150px; outline: none; font-size: 14px; line-height: 1.6; }
+        #j-editor h1 { font-size: 1.5em; font-weight: 800; margin-top: 0.5em; margin-bottom: 0.25em; color: #1e293b; }
+        #j-editor h2 { font-size: 1.25em; font-weight: 700; margin-top: 0.5em; margin-bottom: 0.25em; color: #334155; }
+        #j-editor h3 { font-size: 1.1em; font-weight: 600; margin-top: 0.5em; margin-bottom: 0.25em; color: #475569; }
+        #j-editor b, #j-editor strong { font-weight: 800; }
+        #j-editor u { text-decoration-thickness: 2px; text-decoration-color: #cbd5e1; }
+        #preview-list h1 { font-size: 1.5em; font-weight: 800; margin-top: 1em; color: #1e293b; }
+        #preview-list h2 { font-size: 1.25em; font-weight: 700; margin-top: 0.8em; color: #334155; }
+        #preview-list h3 { font-size: 1.1em; font-weight: 600; margin-top: 0.5em; color: #475569; }
+    </style>
+</head>
+<body class="text-slate-800">
+
+    <div id="season-overlay"></div>
+
+    <div class="glass-nav fixed top-0 w-full h-16 px-5 flex items-center justify-between">
+        <div class="flex items-center gap-4 w-3/4">
+            <button id="back-btn" onclick="app.goUp()" class="hidden w-10 h-10 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center tap-scale shadow-sm">
+                <i class="fas fa-chevron-left"></i>
+            </button>
+            <div class="flex-1 overflow-hidden pt-1">
+                <h1 id="page-title" class="font-black text-2xl leading-none truncate glorious-text">Glorious Purpose</h1>
+                <div id="subtitle-container" class="mt-1">
+                    <span id="page-subtitle" class="bg-emerald-100 border border-emerald-200 text-emerald-700 text-[10px] font-black px-2 py-0.5 rounded-md tracking-widest uppercase">100%</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="flex items-center gap-3">
+            <div class="text-[10px] font-mono font-bold text-slate-400 uppercase text-right leading-tight">
+                <div id="ist-clock">IST 00:00</div>
+            </div>
+            <button onclick="app.openSettings()" class="w-8 h-8 rounded-full bg-white text-slate-400 flex items-center justify-center shadow-sm border border-slate-100 active:bg-slate-100 transition-colors">
+                <i class="fas fa-cog"></i>
+            </button>
+        </div>
+    </div>
+
+    <div class="pt-24 px-4 pb-48 relative z-10" id="main-container">
+        
+        <div id="view-list">
+            
+            <div class="glass p-4 mb-6">
+                <div class="flex justify-between items-center mb-3">
+                    <div class="flex items-center gap-2">
+                        <div class="w-6 h-6 rounded-md bg-indigo-100 text-indigo-600 flex items-center justify-center text-xs"><i class="fas fa-folder-open"></i></div>
+                        <h3 class="font-bold text-slate-700 text-sm">Important Files</h3>
+                    </div>
+                    <input type="file" id="file-upload-input" class="hidden" onchange="app.handleFileUpload(this)">
+                    <button onclick="document.getElementById('file-upload-input').click()" class="text-[10px] font-bold bg-indigo-50 text-indigo-600 px-2 py-1 rounded border border-indigo-100 shadow-sm active:scale-95 transition-transform"><i class="fas fa-plus mr-1"></i> ADD FILE</button>
+                </div>
+                <div id="files-list" class="space-y-2"></div>
+                <div id="files-empty" class="text-center py-2 text-xs text-slate-400 italic hidden">No files saved.</div>
+            </div>
+
+            <div id="items-list" class="space-y-3"></div>
+            
+            <div id="empty-state" class="hidden text-center mt-20 opacity-50">
+                <div class="w-20 h-20 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm"><i class="fas fa-layer-group text-3xl text-slate-300"></i></div>
+                <p class="text-slate-500 font-medium">No items found</p>
+                <p class="text-xs text-slate-400 mt-1">Tap + to start a <span id="empty-type-hint" class="font-bold text-blue-500">Project</span></p>
+            </div>
+        </div>
+
+        <div id="view-calendar" class="hidden">
+            <div class="mb-4 flex justify-between items-center">
+                <h3 class="font-bold text-slate-700 text-sm">Schedule</h3>
+                <span class="text-[10px] bg-slate-200 text-slate-500 px-2 py-1 rounded font-bold">TAP TO PREVIEW</span>
+            </div>
+            <div id="cal-grid-container" class="cal-grid"></div>
+        </div>
+
+        <div id="view-journal" class="hidden">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="font-bold text-slate-700 text-sm">Log Entry</h3>
+                <input type="date" id="journal-date-picker" class="bg-white border border-slate-200 text-slate-600 text-xs font-bold rounded-lg px-3 py-2 outline-none focus:border-blue-500" onchange="journal.loadDate(this.value)">
+            </div>
+            <div class="glass p-5 mb-4">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="font-bold text-slate-700 text-sm" id="journal-date-display">Today</h3>
+                    <button id="journal-save-btn" onclick="journal.save()" class="text-[10px] bg-slate-800 text-white px-3 py-1.5 rounded-lg font-bold shadow-lg shadow-slate-300 transition-all active:scale-95">SAVE</button>
+                </div>
+                <div class="grid grid-cols-3 gap-3">
+                    <div class="text-center"><label class="block text-[9px] font-bold text-slate-400 uppercase mb-1">Wake Up</label><input type="time" id="j-wakeup" class="w-full p-2 bg-slate-50 rounded-lg text-xs text-center font-mono"></div>
+                    <div class="text-center"><label class="block text-[9px] font-bold text-slate-400 uppercase mb-1">Bath</label><input type="time" id="j-bath" class="w-full p-2 bg-slate-50 rounded-lg text-xs text-center font-mono"></div>
+                    <div class="text-center"><label class="block text-[9px] font-bold text-slate-400 uppercase mb-1">Breakfast</label><input type="time" id="j-bf" class="w-full p-2 bg-slate-50 rounded-lg text-xs text-center font-mono"></div>
+                    <div class="text-center"><label class="block text-[9px] font-bold text-slate-400 uppercase mb-1">Lunch</label><input type="time" id="j-lunch" class="w-full p-2 bg-slate-50 rounded-lg text-xs text-center font-mono"></div>
+                    <div class="text-center"><label class="block text-[9px] font-bold text-slate-400 uppercase mb-1">Dinner</label><input type="time" id="j-dinner" class="w-full p-2 bg-slate-50 rounded-lg text-xs text-center font-mono"></div>
+                    <div class="text-center"><label class="block text-[9px] font-bold text-slate-400 uppercase mb-1">Sleep</label><input type="time" id="j-sleep" class="w-full p-2 bg-slate-50 rounded-lg text-xs text-center font-mono"></div>
+                </div>
+            </div>
+            
+            <div class="glass p-5 mb-6">
+                <div class="flex justify-between items-center mb-3">
+                    <h3 class="font-bold text-slate-700 text-sm">Reflection</h3>
+                    <div class="flex gap-2">
+                        <button onclick="document.getElementById('img-input').click()" class="text-[10px] font-bold bg-blue-50 text-blue-600 px-2 py-1 rounded border border-blue-100"><i class="fas fa-camera mr-1"></i> Photo</button>
+                    </div>
+                    <input type="file" id="img-input" accept="image/*" class="hidden" onchange="journal.handleImage(this)">
+                </div>
+                
+                <div class="flex flex-wrap gap-1 mb-2 pb-2 border-b border-slate-100 overflow-x-auto">
+                    <button onclick="journal.format('formatBlock','h1')" class="h-7 px-2 rounded bg-slate-100 text-[10px] font-black text-slate-600 hover:bg-slate-200">TITLE</button>
+                    <button onclick="journal.format('formatBlock','h2')" class="h-7 px-2 rounded bg-slate-100 text-[10px] font-bold text-slate-600 hover:bg-slate-200">HEAD</button>
+                    <button onclick="journal.format('formatBlock','h3')" class="h-7 px-2 rounded bg-slate-100 text-[10px] font-bold text-slate-500 hover:bg-slate-200">SUB</button>
+                    <div class="w-[1px] h-6 bg-slate-200 mx-1 self-center"></div>
+                    <button onclick="journal.format('bold')" class="w-7 h-7 rounded bg-white border border-slate-200 text-xs font-bold hover:bg-slate-50"><i class="fas fa-bold"></i></button>
+                    <button onclick="journal.format('underline')" class="w-7 h-7 rounded bg-white border border-slate-200 text-xs font-bold hover:bg-slate-50"><i class="fas fa-underline"></i></button>
+                    <div class="w-[1px] h-6 bg-slate-200 mx-1 self-center"></div>
+                    <button onclick="journal.format('hiliteColor','#fef08a')" class="w-6 h-6 rounded-full bg-yellow-200 border border-yellow-300"></button>
+                    <button onclick="journal.format('hiliteColor','#bbf7d0')" class="w-6 h-6 rounded-full bg-green-200 border border-green-300"></button>
+                    <button onclick="journal.format('hiliteColor','#bfdbfe')" class="w-6 h-6 rounded-full bg-blue-200 border border-blue-300"></button>
+                    <button onclick="journal.format('hiliteColor','#fbcfe8')" class="w-6 h-6 rounded-full bg-pink-200 border border-pink-300"></button>
+                </div>
+
+                <div id="j-editor" class="w-full bg-slate-50 rounded-xl p-3 text-slate-700 border border-transparent focus:bg-white focus:border-slate-200 transition-colors" contenteditable="true" placeholder="Start writing..."></div>
+                <div id="j-img-preview" class="flex gap-2 mt-3 overflow-x-auto pb-1 pt-1"></div>
+            </div>
+            
+            <h3 class="font-bold text-slate-400 text-xs uppercase tracking-widest mb-3 pl-2">History</h3>
+            <div class="space-y-6" id="journal-history"></div>
+        </div>
+
+        <div id="view-stats" class="hidden bento-grid">
+            <div id="health-card" class="rounded-3xl p-6 text-white shadow-xl bento-wide transition-all duration-500 relative overflow-hidden bg-gradient-to-br from-slate-400 to-slate-500 shadow-lg">
+                <div class="relative z-10 flex justify-between items-start">
+                    <div><p class="text-white/80 text-[10px] font-bold uppercase tracking-widest">Productivity</p><h2 class="text-4xl font-extrabold mt-2 tracking-tight" id="stat-health-text">--%</h2></div>
+                    <div class="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center"><i class="fas fa-heartbeat text-xl"></i></div>
+                </div>
+                <p class="relative z-10 text-white/90 text-xs mt-4 font-medium" id="stat-health-sub">Analyzing...</p>
+            </div>
+            <div class="glass p-4 bg-white flex flex-col justify-between tap-scale">
+                <div class="w-8 h-8 rounded-full bg-green-100 text-green-600 flex items-center justify-center mb-2"><i class="fas fa-flag-checkered"></i></div>
+                <div><p class="text-[10px] font-bold text-slate-400 uppercase">Finish Date</p><h3 class="text-md font-bold text-slate-800 font-mono truncate" id="stat-prediction">--</h3></div>
+            </div>
+            <div class="glass p-4 bg-white flex flex-col justify-between tap-scale">
+                <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center mb-2"><i class="fas fa-bolt"></i></div>
+                <div><p class="text-[10px] font-bold text-slate-400 uppercase">Load</p><h3 class="text-md font-bold text-slate-800 font-mono" id="stat-active-count">0</h3></div>
+            </div>
+            
+            <button onclick="app.downloadReport()" class="glass p-4 bento-wide flex items-center justify-between bg-slate-800 text-white active:scale-95 transition-transform">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center text-lg"><i class="fas fa-file-invoice-dollar"></i></div>
+                    <div class="text-left">
+                        <h3 class="font-bold text-sm">Download Report</h3>
+                        <p class="text-[10px] text-slate-300">Analysis & Pending Work</p>
+                    </div>
+                </div>
+                <i class="fas fa-chevron-right opacity-50"></i>
+            </button>
+
+            <div class="glass p-5 bento-wide bg-white">
+                <div class="flex justify-between items-end mb-4">
+                    <div><h3 class="font-bold text-slate-700 text-sm">Exam Crunch</h3><p class="text-[10px] text-slate-400">Peak: <span id="stat-peak-day" class="font-bold text-slate-600">--</span></p></div>
+                    <div class="flex gap-1"><span class="w-2 h-2 rounded-full bg-blue-500"></span><span class="w-2 h-2 rounded-full bg-orange-400"></span><span class="w-2 h-2 rounded-full bg-red-500"></span></div>
+                </div>
+                <div class="scroller"><div id="forecast-wrapper" style="height: 160px; position: relative;"><canvas id="chart-forecast"></canvas></div></div>
+            </div>
+            <div class="glass p-5 bento-wide bg-white">
+                <div class="mb-4"><h3 class="font-bold text-slate-700 text-sm">Velocity Burn-Up</h3><p class="text-[10px] text-slate-400">Planned vs Actual</p></div>
+                <div style="height: 180px; position: relative;"><canvas id="chart-velocity"></canvas></div>
+            </div>
+        </div>
+        
+        <div class="text-center mt-10 mb-2">
+            <p class="text-[10px] font-black font-mono tracking-widest text-rose-800">MADE BY OG_ADITYAX</p>
+        </div>
+        <div class="h-32"></div> 
+    </div>
+
+    <div id="file-viewer-modal" class="hidden-viewer normal">
+        <div class="fv-header" onclick="app.restoreFileViewer()">
+            <div class="flex items-center gap-2 overflow-hidden">
+                <i class="fas fa-file-alt text-blue-500"></i>
+                <span id="fv-title" class="font-bold text-xs text-slate-700 truncate">Document</span>
+            </div>
+            <div class="fv-controls flex items-center gap-2">
+                <button onclick="event.stopPropagation(); app.toggleFileMinimize()" class="w-6 h-6 rounded bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center btn-min"><i class="fas fa-minus text-[10px]"></i></button>
+                <button onclick="event.stopPropagation(); app.toggleFileMaximize()" class="w-6 h-6 rounded bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center btn-min"><i class="far fa-square text-[10px]"></i></button>
+                <button onclick="event.stopPropagation(); app.closeFileViewer()" class="w-6 h-6 rounded bg-red-50 hover:bg-red-100 text-red-500 flex items-center justify-center"><i class="fas fa-times text-[10px]"></i></button>
+            </div>
+        </div>
+        <div class="fv-content" id="fv-body"></div>
+        <div class="fv-footer">
+            <a href="#" target="_blank" id="fv-external-link"><i class="fas fa-external-link-alt"></i> Open in New Tab</a>
+        </div>
+    </div>
+
+    <div id="preview-overlay" class="preview-overlay" onclick="app.closePreview(event)">
+        <div class="preview-card" onclick="event.stopPropagation()">
+            <div id="preview-header" class="p-6 bg-gradient-to-r from-blue-500 to-indigo-600 text-white relative">
+                <h2 id="prev-date-num" class="text-4xl font-bold">--</h2>
+                <p id="prev-date-day" class="text-sm font-medium opacity-90 uppercase tracking-widest mt-1">--</p>
+                <button onclick="app.forceClosePreview()" class="absolute top-4 right-4 w-8 h-8 bg-white/20 rounded-full flex items-center justify-center hover:bg-white/30"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="p-4 max-h-[60vh] overflow-y-auto" id="preview-list"></div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="settings-overlay" onclick="if(event.target===this) document.getElementById('settings-overlay').classList.remove('open')">
+        <div class="modal">
+            <h3 class="text-xl font-bold text-slate-800 mb-6">Data Settings</h3>
+            <button onclick="app.exportData()" class="w-full py-4 mb-3 bg-blue-50 text-blue-600 font-bold rounded-xl flex items-center justify-center gap-2"><i class="fas fa-file-export"></i> Backup Data (JSON)</button>
+            <label class="w-full py-4 mb-6 bg-slate-50 text-slate-600 font-bold rounded-xl flex items-center justify-center gap-2 cursor-pointer"><i class="fas fa-file-import"></i> Restore Data <input type="file" class="hidden" accept=".json" onchange="app.importData(this)"></label>
+            <button onclick="if(confirm('Delete EVERYTHING?')){localStorage.clear();location.reload()}" class="w-full py-4 bg-red-50 text-red-500 font-bold rounded-xl"><i class="fas fa-trash-alt mr-2"></i> Factory Reset</button>
+            <div class="mt-8 text-center"><p class="text-[10px] font-black font-mono tracking-widest text-rose-800">MADE BY OG_ADITYAX</p></div>
+        </div>
+    </div>
+
+    <button class="fab" id="main-fab" onclick="app.openModal('create')"><i class="fas fa-plus"></i></button>
+
+    <div class="glass-nav bottom-nav fixed bottom-0 w-full flex justify-around py-2 pb-6">
+        <button onclick="app.switchTab('list')" class="nav-btn active w-1/4 flex flex-col items-center py-2" id="btn-list"><i class="fas fa-stream text-lg mb-1"></i><span class="text-[10px] font-bold">Track</span><div class="nav-indicator"></div></button>
+        <button onclick="app.switchTab('calendar')" class="nav-btn w-1/4 flex flex-col items-center py-2" id="btn-calendar"><i class="far fa-calendar-alt text-lg mb-1"></i><span class="text-[10px] font-bold">Plan</span><div class="nav-indicator"></div></button>
+        <button onclick="app.switchTab('journal')" class="nav-btn w-1/4 flex flex-col items-center py-2" id="btn-journal"><i class="fas fa-feather-alt text-lg mb-1"></i><span class="text-[10px] font-bold">Log</span><div class="nav-indicator"></div></button>
+        <button onclick="app.switchTab('stats')" class="nav-btn w-1/4 flex flex-col items-center py-2" id="btn-stats"><i class="fas fa-chart-pie text-lg mb-1"></i><span class="text-[10px] font-bold">Stats</span><div class="nav-indicator"></div></button>
+    </div>
+
+    <div class="modal-overlay" id="modal-overlay" onclick="if(event.target===this) app.closeModal()">
+        <div class="modal">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-xl font-bold text-slate-800" id="modal-title">New Item</h3>
+                <button onclick="app.closeModal()" class="w-8 h-8 bg-slate-100 rounded-full text-slate-400"><i class="fas fa-times"></i></button>
+            </div>
+            <form onsubmit="app.handleSave(event)">
+                <input type="hidden" id="inp-id">
+                <div class="flex bg-slate-100 p-1 rounded-xl mb-5">
+                    <button type="button" onclick="app.setMode('task')" id="mode-task" class="flex-1 py-2 rounded-lg text-xs font-bold transition-all bg-white shadow text-blue-600">TASK</button>
+                    <button type="button" onclick="app.setMode('event')" id="mode-event" class="flex-1 py-2 rounded-lg text-xs font-bold transition-all text-slate-400">EVENT</button>
+                </div>
+                <input type="hidden" id="inp-type" value="task">
+                <div class="mb-5"><label class="text-[10px] font-bold text-slate-400 uppercase">Title</label><input type="text" id="inp-title" required class="w-full p-3 bg-slate-100 rounded-xl mt-1 font-semibold outline-none focus:ring-2 focus:ring-blue-500"></div>
+                <div id="field-priority" class="mb-5"><label class="text-[10px] font-bold text-slate-400 uppercase">Priority</label>
+                    <div class="grid grid-cols-3 gap-3 mt-1">
+                        <label class="cursor-pointer"><input type="radio" name="priority" value="High" class="peer hidden"><div class="text-center py-2 rounded-lg bg-slate-50 text-red-500 font-bold text-xs peer-checked:bg-red-500 peer-checked:text-white transition-all">HIGH</div></label>
+                        <label class="cursor-pointer"><input type="radio" name="priority" value="Medium" class="peer hidden" checked><div class="text-center py-2 rounded-lg bg-slate-50 text-amber-500 font-bold text-xs peer-checked:bg-amber-400 peer-checked:text-white transition-all">MED</div></label>
+                        <label class="cursor-pointer"><input type="radio" name="priority" value="Low" class="peer hidden"><div class="text-center py-2 rounded-lg bg-slate-50 text-blue-500 font-bold text-xs peer-checked:bg-blue-500 peer-checked:text-white transition-all">LOW</div></label>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4 mb-6">
+                    <div id="field-start"><label class="text-[10px] font-bold text-slate-400 uppercase">Start</label><input type="date" id="inp-start" required class="w-full p-3 bg-slate-100 rounded-xl mt-1 text-xs font-bold outline-none"></div>
+                    <div id="field-end"><label class="text-[10px] font-bold text-slate-400 uppercase" id="label-end">Due</label><input type="date" id="inp-end" required class="w-full p-3 bg-slate-100 rounded-xl mt-1 text-xs font-bold outline-none"></div>
+                </div>
+                <button type="submit" class="w-full py-4 bg-blue-600 text-white font-bold rounded-xl shadow-lg shadow-blue-500/30">Save</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // --- SERVICE WORKER REGISTRATION ---
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('Service Worker registered!', reg))
+                    .catch(err => console.log('Service Worker failed', err));
+            });
+        }
+
+        // --- 1. JOURNAL ENGINE ---
+        const journal = {
+            data: JSON.parse(localStorage.getItem('zenith_minimal_journal')) || {}, 
+            cats: [
+                {id:'wakeup', icon:'☀️', color:'j-bg-yellow'}, {id:'bath', icon:'🛁', color:'j-bg-blue'},
+                {id:'bf', icon:'🍳', color:'j-bg-orange'}, {id:'lunch', icon:'🍱', color:'j-bg-green'},
+                {id:'dinner', icon:'🍽️', color:'j-bg-red'}, {id:'sleep', icon:'🌙', color:'j-bg-purple'}
+            ],
+            currentDate: new Date().toLocaleDateString('en-CA', {timeZone: 'Asia/Kolkata'}),
+            tempImages: [],
+
+            init: () => {
+                const today = app.getIST();
+                const picker = document.getElementById('journal-date-picker');
+                picker.value = today; picker.max = today;
+                journal.loadDate(today);
+                journal.renderHistory();
+            },
+            
+            format: (cmd, val) => {
+                document.execCommand(cmd, false, val);
+                document.getElementById('j-editor').focus();
+            },
+
+            loadDate: (dateStr) => {
+                journal.currentDate = dateStr;
+                const today = app.getIST();
+                const btn = document.getElementById('journal-save-btn');
+                const display = document.getElementById('journal-date-display');
+                if(dateStr > today) { display.innerText="Future"; btn.disabled=true; btn.classList.add('opacity-50'); return; }
+                else { btn.disabled=false; btn.classList.remove('opacity-50'); display.innerText=dateStr===today?"Today":dateStr; }
+                const entry = journal.data[dateStr];
+                
+                journal.cats.forEach(c => document.getElementById('j-'+c.id).value = '');
+                const editor = document.getElementById('j-editor');
+                editor.innerHTML = '';
+                journal.tempImages = []; document.getElementById('j-img-preview').innerHTML = '';
+                
+                if(entry) {
+                    journal.cats.forEach(c => { if(entry[c.id]) document.getElementById('j-'+c.id).value = entry[c.id]; });
+                    if(entry.htmlContent) {
+                        editor.innerHTML = entry.htmlContent;
+                    } else {
+                        let html = '';
+                        if(entry.titles && Array.isArray(entry.titles)) {
+                            entry.titles.forEach(t => html += `<h1>${t}</h1>`);
+                        } else if(entry.noteTitle) {
+                            html += `<h1>${entry.noteTitle}</h1>`;
+                        }
+                        if(entry.noteBody) {
+                            html += `<p>${entry.noteBody}</p>`;
+                        }
+                        editor.innerHTML = html;
+                    }
+                    if(entry.images) { journal.tempImages = [...entry.images]; journal.renderImgPreview(); }
+                }
+            },
+            
+            save: () => {
+                const date = journal.currentDate;
+                if(date > app.getIST()) { alert("Future locked."); return; }
+                const entry = journal.data[date] || { date: date };
+                journal.cats.forEach(c => { const val = document.getElementById('j-'+c.id).value; if(val) entry[c.id] = val; });
+                
+                entry.htmlContent = document.getElementById('j-editor').innerHTML;
+                delete entry.titles; delete entry.noteTitle; delete entry.noteBody;
+
+                entry.images = journal.tempImages;
+                journal.data[date] = entry;
+                localStorage.setItem('zenith_minimal_journal', JSON.stringify(journal.data));
+                journal.renderHistory(); alert("Saved");
+            },
+
+            handleImage: (input) => {
+                if(input.files && input.files[0]) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        const img = new Image();
+                        img.onload = () => {
+                            const cvs = document.createElement('canvas'); const ctx = cvs.getContext('2d');
+                            const scale = 300 / img.width; cvs.width = 300; cvs.height = img.height * scale;
+                            ctx.drawImage(img,0,0,cvs.width,cvs.height);
+                            const url = cvs.toDataURL('image/jpeg', 0.6);
+                            journal.tempImages.push(url); journal.renderImgPreview();
+                        };
+                        img.src = e.target.result;
+                    };
+                    reader.readAsDataURL(input.files[0]);
+                }
+            },
+            removeImage: (idx) => { journal.tempImages.splice(idx, 1); journal.renderImgPreview(); },
+            renderImgPreview: () => {
+                const container = document.getElementById('j-img-preview'); container.innerHTML = '';
+                journal.tempImages.forEach((src, idx) => {
+                    container.innerHTML += `<div class="note-img-wrapper"><img src="${src}" class="note-img"><div onclick="journal.removeImage(${idx})" class="note-remove-btn"><i class="fas fa-times"></i></div></div>`;
+                });
+            },
+            openLogPreview: (dateStr) => {
+                const entry = journal.data[dateStr]; if(!entry) return;
+                const parts = dateStr.split('-'); const d = new Date(parts[0], parts[1]-1, parts[2]);
+                document.getElementById('prev-date-num').innerText = d.getDate();
+                document.getElementById('prev-date-day').innerText = d.toLocaleDateString('en-US',{month:'long',year:'numeric'});
+                const list = document.getElementById('preview-list'); list.innerHTML = '';
+                let gridHtml = '<div class="grid grid-cols-2 gap-3 mb-6">';
+                journal.cats.forEach(c => { if(entry[c.id]) { const [h,m] = entry[c.id].split(':'); const hr = parseInt(h); gridHtml += `<div class="bg-slate-50 p-2 rounded-xl flex items-center gap-2 border border-slate-100"><div class="text-xl">${c.icon}</div><div class="text-sm font-bold text-slate-700 font-mono">${hr%12||12}:${m} ${hr>=12?'PM':'AM'}</div></div>`; } });
+                gridHtml += '</div>';
+                
+                let noteHtml = ''; 
+                let content = entry.htmlContent;
+                if(!content) {
+                    if(entry.titles) entry.titles.forEach(t=>content+=`<h1>${t}</h1>`);
+                    if(entry.noteBody) content+=`<p>${entry.noteBody}</p>`;
+                }
+
+                if(content) { 
+                    noteHtml = `<div class="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-xl mb-4 text-slate-700 space-y-2" id="preview-content">${content}</div>`; 
+                }
+
+                let imgHtml = ''; if(entry.images && entry.images.length > 0) { imgHtml = `<div class="space-y-3">`; entry.images.forEach(src => imgHtml += `<img src="${src}" class="w-full rounded-xl shadow-md">`); imgHtml += `</div>`; }
+                list.innerHTML = gridHtml + noteHtml + imgHtml;
+                document.getElementById('preview-overlay').classList.add('active');
+            },
+            renderHistory: () => {
+                const cont = document.getElementById('journal-history'); cont.innerHTML = '';
+                const sorted = Object.values(journal.data).sort((a,b) => new Date(b.date) - new Date(a.date));
+                sorted.forEach(e => {
+                    const d = new Date(e.date); 
+                    const hasNote = e.htmlContent || e.titles || e.noteBody; 
+                    const hasImg = e.images && e.images.length > 0;
+                    cont.innerHTML += `<div onclick="journal.openLogPreview('${e.date}')" class="glass p-3 flex items-center justify-between active:scale-95 transition-transform cursor-pointer"><div class="flex items-center gap-3"><div class="bg-blue-100 text-blue-600 w-10 h-10 rounded-full flex items-center justify-center font-bold text-xs shadow-sm flex-col leading-none pt-1"><span>${d.getDate()}</span><span class="text-[8px] uppercase">${d.toLocaleDateString('en-US',{month:'short'})}</span></div><div><div class="text-xs font-bold text-slate-700">Daily Log</div><div class="text-[10px] text-slate-400 flex gap-2 mt-0.5">${hasNote ? '<span><i class="fas fa-sticky-note mr-1"></i>Note</span>' : ''}${hasImg ? '<span><i class="fas fa-image mr-1"></i>Img</span>' : ''}</div></div></div><i class="fas fa-chevron-right text-slate-300 text-xs"></i></div>`;
+                });
+            }
+        };
+
+        // --- 3. CORE APP ---
+        const app = {
+            data: [], currParent: null, 
+            files: [], 
+            hierarchy: ['project','task','subtask'], 
+            charts: {},
+            currBlobUrl: null,
+            dragSrcEl: null,
+            currPreviewDate: null,
+
+            init: () => {
+                try {
+                    const raw = localStorage.getItem('zenith_minimal_v1');
+                    app.data = raw ? JSON.parse(raw) : [];
+                    const rawFiles = localStorage.getItem('zenith_files');
+                    app.files = rawFiles ? JSON.parse(rawFiles) : [];
+                } catch(e) { app.data = []; app.files = []; }
+                setInterval(() => document.getElementById('ist-clock').innerText = "IST "+new Date().toLocaleTimeString('en-US',{timeZone:'Asia/Kolkata',hour12:false}), 1000);
+                app.renderList();
+                app.renderFiles(); 
+                journal.init();
+                app.initSeason(); 
+            },
+
+            initSeason: () => {
+                const month = new Date().getMonth(); 
+                const overlay = document.getElementById('season-overlay');
+                let html = '';
+                if (month === 11 || month === 0 || month === 1) { 
+                    for(let i=0; i<30; i++) html += `<div class="snowflake" style="left:${Math.random()*100}vw; animation-duration:${Math.random()*5+5}s; font-size:${Math.random()*10+10}px; animation-delay:-${Math.random()*5}s">❄️</div>`;
+                } else if (month === 2 || month === 3) {
+                    for(let i=0; i<20; i++) html += `<div class="petal" style="left:${Math.random()*100}vw; animation-duration:${Math.random()*5+5}s; font-size:${Math.random()*10+12}px; animation-delay:-${Math.random()*5}s">🌸</div>`;
+                } else if (month >= 4 && month <= 7) {
+                    html = `<div class="heat-haze"></div><div class="the-sun">☀️</div>`;
+                } else {
+                    for(let i=0; i<15; i++) html += `<div class="leaf" style="left:${Math.random()*100}vw; animation-duration:${Math.random()*5+5}s; font-size:${Math.random()*12+12}px; animation-delay:-${Math.random()*5}s">🍂</div>`;
+                }
+                overlay.innerHTML = html;
+            },
+
+            downloadReport: () => {
+                const tasks = app.data.filter(x => x.type !== 'event');
+                const total = tasks.length;
+                const completed = tasks.filter(t => t.completed).length;
+                const overdue = tasks.filter(x => !x.completed && x.deadline < app.getIST()).length;
+                const health = total > 0 ? Math.round((completed / total) * 100) : 0;
+                const remaining = tasks.filter(t => !t.completed).sort((a,b) => new Date(a.deadline) - new Date(b.deadline));
+                let advice = ""; let quote = "";
+                if(health < 50) { advice = "- Breakdown big tasks into subtasks.\n- Focus on one thing at a time."; quote = "Do not wait to strike till the iron is hot; but make it hot by striking. - W.B. Yeats"; } 
+                else if(health > 80) { advice = "- You are crushing it. Maybe increase the difficulty?"; quote = "We are what we repeatedly do. Excellence, then, is not an act, but a habit. - Aristotle"; } 
+                else { advice = "- Good flow. Try to clear the backlog this weekend."; quote = "Success is the sum of small efforts, repeated day in and day out. - Robert Collier"; }
+                const report = `ZENITH GLORIOUS - PERFORMANCE REPORT\n--------------------------------------\nGenerated: ${app.getIST()}\nTime: ${new Date().toLocaleTimeString()}\n\n[ KEY METRICS ]\nTotal Tasks: ${total}\nCompleted: ${completed}\nRate: ${health}%\nOverdue: ${overdue}\n\n[ ADVICE ]\n${advice}\n\n[ PENDING WORK ]\n${remaining.slice(0, 15).map(t => `- [ ] ${t.title} (${t.deadline}) [${t.priority}]`).join('\n') || "No pending work!"}\n\n"${quote}"\n\nSigned,\nOG_ADITYAX`;
+                const blob = new Blob([report], {type: 'text/plain'});
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a'); a.href = url; a.download = `Report_${app.getIST()}.txt`; a.click();
+            },
+
+            saveFiles: () => localStorage.setItem('zenith_files', JSON.stringify(app.files)),
+            handleFileUpload: (input) => {
+                if(input.files && input.files[0]) {
+                    const file = input.files[0];
+                    if(file.size > 1048576) { alert("File too large! Max 1MB."); return; } 
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        app.files.push({id: Date.now().toString(), name: file.name, link: e.target.result, type: file.type});
+                        try { app.saveFiles(); app.renderFiles(); } catch(err) { alert("Storage full! Delete some files."); }
+                    };
+                    reader.readAsDataURL(file);
+                }
+            },
+            delFile: (id) => { if(confirm("Delete file?")) { app.files = app.files.filter(f => f.id !== id); app.saveFiles(); app.renderFiles(); } },
+            
+            base64ToBlob: (base64, type) => {
+                try {
+                    const parts = base64.split(';base64,');
+                    const raw = window.atob(parts[1]);
+                    const uInt8Array = new Uint8Array(raw.length);
+                    for (let i = 0; i < raw.length; ++i) uInt8Array[i] = raw.charCodeAt(i);
+                    return new Blob([uInt8Array], {type: type});
+                } catch(e) { console.error("Blob Convert Error", e); return null; }
+            },
+
+            previewFile: (id) => {
+                const f = app.files.find(x => x.id === id); if(!f) return;
+                const viewer = document.getElementById('file-viewer-modal');
+                document.getElementById('fv-title').innerText = f.name;
+                const body = document.getElementById('fv-body');
+                const extLink = document.getElementById('fv-external-link');
+                
+                if (f.type.startsWith('image/')) {
+                    body.innerHTML = `<img src="${f.link}" alt="${f.name}">`;
+                    extLink.href = f.link;
+                } else {
+                    if (app.currBlobUrl) URL.revokeObjectURL(app.currBlobUrl);
+                    const blob = app.base64ToBlob(f.link, f.type);
+                    if(blob) {
+                        app.currBlobUrl = URL.createObjectURL(blob);
+                        extLink.href = app.currBlobUrl;
+                        body.innerHTML = `<object data="${app.currBlobUrl}" type="${f.type}" width="100%" height="100%"><div class="flex items-center justify-center h-full text-slate-400 text-sm">Preview not supported.<br>Use button below.</div></object>`;
+                    } else { body.innerHTML = `<div class="p-4 text-center text-red-500">Error loading file.</div>`; }
+                }
+                viewer.classList.remove('hidden-viewer', 'minimized', 'maximized'); viewer.classList.add('normal');
+            },
+
+            closeFileViewer: () => {
+                const viewer = document.getElementById('file-viewer-modal');
+                viewer.classList.remove('normal', 'maximized', 'minimized'); viewer.classList.add('hidden-viewer'); 
+                setTimeout(() => { document.getElementById('fv-body').innerHTML = ''; if (app.currBlobUrl) { URL.revokeObjectURL(app.currBlobUrl); app.currBlobUrl = null; } }, 100);
+            },
+            toggleFileMaximize: () => { const v = document.getElementById('file-viewer-modal'); if(v.classList.contains('maximized')) { v.classList.remove('maximized'); v.classList.add('normal'); } else { v.classList.remove('normal', 'minimized'); v.classList.add('maximized'); } },
+            toggleFileMinimize: () => { const v = document.getElementById('file-viewer-modal'); v.classList.remove('normal', 'maximized'); v.classList.add('minimized'); },
+            restoreFileViewer: () => { const v = document.getElementById('file-viewer-modal'); if(v.classList.contains('minimized')) { v.classList.remove('minimized'); v.classList.add('normal'); } },
+            
+            renderFiles: () => {
+                const list = document.getElementById('files-list'); list.innerHTML = '';
+                if(app.files.length === 0) { document.getElementById('files-empty').classList.remove('hidden'); return; }
+                document.getElementById('files-empty').classList.add('hidden');
+                app.files.forEach(f => {
+                    const isImg = f.type && f.type.startsWith('image');
+                    const icon = isImg ? 'fa-image' : (f.type.includes('pdf') ? 'fa-file-pdf' : 'fa-file-alt');
+                    const thumb = isImg ? `<div class="w-8 h-8 rounded bg-slate-100 bg-cover bg-center border border-slate-200" style="background-image:url('${f.link}')"></div>` : `<div class="w-8 h-8 rounded bg-slate-100 flex items-center justify-center text-slate-400"><i class="fas ${icon}"></i></div>`;
+                    list.innerHTML += `<div class="file-item bg-white rounded-lg p-2 flex items-center justify-between gap-3"><div class="flex items-center gap-3 overflow-hidden flex-1 cursor-pointer" onclick="app.previewFile('${f.id}')">${thumb}<div class="truncate"><div class="text-xs font-bold text-slate-700 truncate">${f.name}</div><div class="text-[9px] text-slate-400 font-mono">TAP TO PREVIEW</div></div></div><button onclick="app.delFile('${f.id}')" class="text-slate-300 hover:text-red-500 px-3"><i class="fas fa-trash-alt"></i></button></div>`;
+                });
+            },
+
+            handleDragStart: (e) => { app.dragSrcEl = e.target; e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/html', e.target.innerHTML); e.target.classList.add('dragging'); },
+            handleDragOver: (e) => { if (e.preventDefault) e.preventDefault(); e.dataTransfer.dropEffect = 'move'; return false; },
+            handleDragEnter: (e) => { const t = e.target.closest('.draggable-item'); if (t && t !== app.dragSrcEl) t.classList.add('drag-over'); },
+            handleDragLeave: (e) => { const t = e.target.closest('.draggable-item'); if (t) t.classList.remove('drag-over'); },
+            handleDrop: (e) => {
+                if (e.stopPropagation) e.stopPropagation();
+                const target = e.target.closest('.draggable-item');
+                if (app.dragSrcEl && target && app.dragSrcEl !== target) {
+                    const sId = app.dragSrcEl.getAttribute('data-id'); const tId = target.getAttribute('data-id');
+                    const sIdx = app.data.findIndex(x => x.id === sId); const tIdx = app.data.findIndex(x => x.id === tId);
+                    if (sIdx > -1 && tIdx > -1) { const [m] = app.data.splice(sIdx, 1); app.data.splice(tIdx, 0, m); app.save(); }
+                } return false;
+            },
+            handleDragEnd: (e) => { app.dragSrcEl = null; document.querySelectorAll('.draggable-item').forEach(i => { i.classList.remove('drag-over'); i.classList.remove('dragging'); }); app.renderList(); },
+
+            openSettings: () => document.getElementById('settings-overlay').classList.add('open'),
+            exportData: () => { const b = { tasks: app.data, journal: journal.data, files: app.files }; const u = URL.createObjectURL(new Blob([JSON.stringify(b)], {type: 'application/json'})); const a = document.createElement('a'); a.href = u; a.download = `zenith_backup_${app.getIST()}.json`; a.click(); },
+            importData: (input) => { const r = new FileReader(); r.onload = (e) => { try { const d = JSON.parse(e.target.result); if(d.tasks) localStorage.setItem('zenith_minimal_v1', JSON.stringify(d.tasks)); if(d.journal) localStorage.setItem('zenith_minimal_journal', JSON.stringify(d.journal)); if(d.files) localStorage.setItem('zenith_files', JSON.stringify(d.files)); location.reload(); } catch(err) { alert("Invalid File"); } }; r.readAsText(input.files[0]); },
+            getIST: () => new Date().toLocaleDateString('en-CA', {timeZone: 'Asia/Kolkata'}),
+            save: () => localStorage.setItem('zenith_minimal_v1', JSON.stringify(app.data)),
+            getLevel: (pid) => { if(!pid) return 'project'; const p=app.data.find(x=>x.id===pid); if(!p || p.type==='event') return 'subtask'; const i=app.hierarchy.indexOf(p.type); return (i!==-1 && i<app.hierarchy.length-1)?app.hierarchy[i+1]:'subtask'; },
+            getProgress: (id) => { const k=app.data.filter(x=>x.parentId===id && x.type!=='event'); if(k.length===0) {const i=app.data.find(x=>x.id===id); return i&&i.completed?100:0;} return Math.round(k.reduce((a,b)=>a+app.getProgress(b.id),0)/k.length); },
+            
+            switchTab: (t) => {
+                document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+                ['list','calendar','stats','journal'].forEach(v => document.getElementById('view-'+v).classList.add('hidden'));
+                document.getElementById('btn-'+t).classList.add('active');
+                document.getElementById('view-'+t).classList.remove('hidden');
+                document.getElementById('main-fab').style.display = t === 'list' ? 'flex' : 'none';
+                if(t==='list') { app.renderList(); app.renderFiles(); } 
+                if(t==='calendar') app.renderCalendar(); if(t==='stats') app.renderStats();
+            },
+            
+            toggleVisibility: (id) => {
+                const item = app.data.find(x => x.id === id);
+                if (item) {
+                    item.showInCal = (item.showInCal === undefined) ? false : !item.showInCal;
+                    app.save();
+                    app.renderList();
+                }
+            },
+
+            renderList: () => {
+                const list = document.getElementById('items-list'); list.innerHTML = '';
+                const title = document.getElementById('page-title'); const subtitle = document.getElementById('page-subtitle');
+                const back = document.getElementById('back-btn'); const emptyHint = document.getElementById('empty-type-hint');
+
+                if(!app.currParent) { 
+                    title.innerText = 'Glorious Purpose'; title.className = "font-black text-2xl leading-none truncate glorious-text";
+                    subtitle.innerText = '100%'; subtitle.className = "bg-emerald-100/50 border border-emerald-200/50 text-emerald-700 text-[9px] font-black px-2 py-0.5 rounded-md tracking-widest uppercase backdrop-blur-sm inline-block mt-1";
+                    back.classList.add('hidden'); emptyHint.innerText = 'Project';
+                } else { 
+                    const p = app.data.find(x => x.id === app.currParent);
+                    title.innerText = p.title; title.className = "font-bold text-xl leading-none truncate text-slate-800";
+                    subtitle.innerText = p.type.toUpperCase(); subtitle.className = "text-xs text-slate-400 font-medium mt-0.5";
+                    back.classList.remove('hidden'); emptyHint.innerText = app.getLevel(app.currParent);
+                }
+                
+                const items = app.data.filter(x => { const match = app.currParent ? x.parentId === app.currParent : !x.parentId; return match && x.type !== 'event'; });
+                if(items.length===0) document.getElementById('empty-state').classList.remove('hidden'); else document.getElementById('empty-state').classList.add('hidden');
+                
+                items.forEach(i => {
+                    const isLeaf = i.type === 'subtask'; const prog = app.getProgress(i.id);
+                    let badge = 'bg-slate-100 text-slate-500';
+                    if(i.type==='project') badge='bg-blue-100 text-blue-600'; if(i.type==='task') badge='bg-amber-100 text-amber-600';
+                    const priColor = {High:'text-red-500', Medium:'text-amber-500', Low:'text-blue-500'}[i.priority] || 'text-slate-400';
+                    const subCount = app.data.filter(x => x.parentId === i.id && x.type !== 'event').length;
+                    
+                    const isVisible = i.showInCal !== false;
+
+                    const el = document.createElement('div');
+                    el.className = "glass p-4 card mb-3 relative overflow-hidden flex items-center gap-3 tap-scale draggable-item";
+                    el.setAttribute('draggable', 'true'); el.setAttribute('data-id', i.id);
+                    el.addEventListener('dragstart', app.handleDragStart); el.addEventListener('dragover', app.handleDragOver); el.addEventListener('dragenter', app.handleDragEnter);
+                    el.addEventListener('dragleave', app.handleDragLeave); el.addEventListener('drop', app.handleDrop); el.addEventListener('dragend', app.handleDragEnd);
+
+                    el.innerHTML = `
+                        <div onclick="app.toggle('${i.id}')" class="w-6 h-6 rounded-full border-2 ${i.completed?'bg-green-500 border-green-500 text-white':'border-slate-300'} flex items-center justify-center cursor-pointer z-10 no-drag">
+                            ${i.completed?'<i class="fas fa-check text-[10px]"></i>':''}
+                        </div>
+                        <div class="flex-1 cursor-pointer" onclick="app.drill('${i.id}')">
+                            <div class="flex items-center mb-1 gap-2">
+                                <span class="text-[9px] font-bold ${badge} px-2 py-0.5 rounded uppercase">${i.type}</span>
+                                <span class="text-[10px] font-bold ${priColor} uppercase">${i.priority}</span>
+                                ${subCount > 0 ? `<span class="text-[9px] font-bold text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-100 flex items-center"><i class="fas fa-code-branch mr-1"></i>${subCount}</span>` : ''}
+                            </div>
+                            <h3 class="font-bold text-slate-800 ${i.completed?'line-through text-slate-400':''}">${i.title}</h3>
+                            <div class="text-xs text-slate-400 mt-1">${i.deadline}</div>
+                        </div>
+                        <div class="flex flex-col gap-3 z-10 no-drag">
+                            <button onclick="app.toggleVisibility('${i.id}')" class="${isVisible ? 'text-blue-500' : 'text-slate-300'} hover:text-blue-600">
+                                <i class="fas ${isVisible ? 'fa-eye' : 'fa-eye-slash'}"></i>
+                            </button>
+                            <button onclick="app.openModal('edit','${i.id}')" class="text-slate-300 hover:text-blue-500"><i class="fas fa-pencil-alt"></i></button>
+                            <button onclick="app.delItem('${i.id}')" class="text-slate-300 hover:text-red-500"><i class="fas fa-trash"></i></button>
+                        </div>
+                        ${!isLeaf ? `<div class="absolute bottom-0 left-0 w-full h-1 bg-slate-100"><div class="h-full bg-blue-500 transition-all duration-500" style="width:${prog}%"></div></div>` : ''}
+                    `;
+                    list.appendChild(el);
+                });
+            },
+            
+            renderCalendar: () => {
+                const grid = document.getElementById('cal-grid-container'); grid.innerHTML = '';
+                const today = app.getIST(); let curr = new Date(2026, 0, 1); const end = new Date(2026, 2, 15);
+                while(curr <= end) {
+                    const dStr = curr.toLocaleDateString('en-CA'); const dNum = curr.getDate(); const dMonth = curr.toLocaleDateString('en-US', {month:'short'});
+                    const items = [...app.data.filter(x=>x.type==='event'&&x.deadline===dStr), ...app.data.filter(x=>x.type!=='event'&&!x.completed&&x.deadline===dStr&&x.showInCal!==false)];
+                    let slots = ''; 
+                    for(let i=0; i<5; i++) { 
+                        if(items[i]) { 
+                            const cls = items[i].type==='event'?'bg-Event':`bg-${items[i].priority}`; 
+                            slots+=`<div class="slot ${cls}">${items[i].title}</div>`; 
+                        } else { slots += `<div class="slot slot-empty"></div>`; }
+                    }
+                    grid.innerHTML += `<div class="cal-day-box ${dStr===today?'is-today':''}" onclick="app.openTaskPreview('${dStr}')"><div class="text-[10px] font-bold text-slate-400 uppercase">${dNum} ${dMonth}</div><div class="cal-slots">${slots}</div></div>`;
+                    curr.setDate(curr.getDate()+1);
+                }
+            },
+            
+            openTaskPreview: (dStr) => {
+                app.currPreviewDate = dStr;
+                const parts = dStr.split('-'); const d = new Date(parts[0], parts[1]-1, parts[2]);
+                document.getElementById('prev-date-num').innerText = d.getDate(); 
+                document.getElementById('prev-date-day').innerText = d.toLocaleDateString('en-US',{month:'long',year:'numeric'});
+                const list = document.getElementById('preview-list'); list.innerHTML = '';
+                const items = app.data.filter(x => x.deadline === dStr); items.sort((a,b)=>(a.type==='event'?-1:1));
+                if(items.length===0) list.innerHTML = '<div class="text-center text-gray-400 text-sm py-4">Nothing scheduled.</div>';
+                
+                items.forEach(t => {
+                    const isEv = t.type==='event';
+                    list.innerHTML += `
+                    <div class="flex items-center gap-3 py-3 border-b border-gray-100 last:border-0">
+                        <button onclick="app.previewToggle('${t.id}','${dStr}')" class="w-6 h-6 rounded-full border-2 ${isEv?'bg-indigo-500 border-indigo-500 text-white':(t.completed?'bg-green-500 border-green-500 text-white':'border-slate-300')} flex items-center justify-center transition-all">
+                            ${isEv?'<i class="fas fa-calendar text-[10px]"></i>':'<i class="fas fa-check text-[10px]"></i>'}
+                        </button>
+                        <div class="flex-1">
+                            <div class="font-semibold text-slate-800 text-sm ${t.completed?'line-through text-gray-400':''}">${t.title}</div>
+                        </div>
+                        <button onclick="app.openModal('edit','${t.id}')" class="w-8 h-8 flex items-center justify-center rounded-full bg-slate-50 text-slate-400 hover:text-blue-500 active:bg-slate-200">
+                            <i class="fas fa-pencil-alt text-xs"></i>
+                        </button>
+                        <button onclick="app.deleteFromPreview('${t.id}','${dStr}')" class="w-8 h-8 flex items-center justify-center rounded-full bg-slate-50 text-slate-400 hover:text-red-500 active:bg-slate-200">
+                            <i class="fas fa-trash text-xs"></i>
+                        </button>
+                    </div>`;
+                });
+                document.getElementById('preview-overlay').classList.add('active');
+            },
+
+            deleteFromPreview: (id, dStr) => {
+                if(confirm('Delete item?')) {
+                    const rec = (pid) => { app.data.filter(x => x.parentId === pid).forEach(k => rec(k.id)); app.data = app.data.filter(x => x.id !== pid); }; 
+                    rec(id); 
+                    app.save(); 
+                    app.renderCalendar(); 
+                    app.openTaskPreview(dStr); 
+                    app.renderList();
+                }
+            },
+
+            closePreview: (e) => { if(e.target.id === 'preview-overlay') app.forceClosePreview(); }, 
+            forceClosePreview: () => {
+                document.getElementById('preview-overlay').classList.remove('active');
+                app.currPreviewDate = null;
+            },
+            previewToggle: (id, dStr) => { app.toggle(id); app.openTaskPreview(dStr); app.renderCalendar(); },
+            drill: (id) => { app.currParent = id; app.renderList(); },
+            goUp: () => { if(app.currParent) { const c = app.data.find(x=>x.id===app.currParent); app.currParent = c?c.parentId:null; app.renderList(); } },
+            toggle: (id) => { const i = app.data.find(x => x.id === id); if(i && i.type !== 'event') { i.completed = !i.completed; i.completed ? i.completedAt = app.getIST() : delete i.completedAt; app.save(); if(!document.getElementById('view-list').classList.contains('hidden')) app.renderList(); } },
+            delItem: (id) => { if(!confirm('Delete?')) return; const rec = (pid) => { app.data.filter(x => x.parentId === pid).forEach(k => rec(k.id)); app.data = app.data.filter(x => x.id !== pid); }; rec(id); app.save(); app.renderList(); },
+
+            renderStats: () => {
+                const tasks = app.data.filter(x => x.type !== 'event');
+                const total = tasks.length; const done = tasks.filter(x=>x.completed).length;
+                const overdue = tasks.filter(x=>!x.completed && x.deadline < app.getIST()).length;
+                let health = total>0 ? Math.max(0, Math.min(100, Math.round(((done-(overdue*1.5))/total)*100))) : 100;
+                document.getElementById('stat-health-text').innerText = health + '%';
+                const card = document.getElementById('health-card'); const sub = document.getElementById('stat-health-sub');
+                card.className = "rounded-3xl p-6 text-white shadow-xl bento-wide transition-all duration-500 relative overflow-hidden bg-gradient-to-br";
+                if(health>80) { card.classList.add('from-emerald-500','to-teal-600','shadow-emerald-500/40'); sub.innerText="Peak Flow"; }
+                else if(health>50) { card.classList.add('from-amber-500','to-orange-600','shadow-orange-500/40'); sub.innerText="Keep Pushing"; }
+                else { card.classList.add('from-red-600','to-rose-700','shadow-red-500/40'); sub.innerText="Clear Backlog"; }
+                const activeLoad = total - done; document.getElementById('stat-active-count').innerText = activeLoad;
+                if (total > 0 && done > 0) {
+                    const first = app.data.length > 0 ? new Date(parseInt(app.data[0].id)) : new Date();
+                    const now = new Date(); const daysActive = Math.max(1, (now - first)/(1000*60*60*24)); const velocity = done / daysActive;
+                    if(velocity > 0 && activeLoad > 0) { const daysLeft = Math.ceil(activeLoad / velocity); const endD = new Date(); endD.setDate(endD.getDate() + daysLeft); document.getElementById('stat-prediction').innerText = endD.toLocaleDateString('en-US',{month:'short',day:'numeric'}); } 
+                    else if (activeLoad === 0) { document.getElementById('stat-prediction').innerText = "All Done!"; } else { document.getElementById('stat-prediction').innerText = "Stalled"; }
+                } else if (total > 0) { document.getElementById('stat-prediction').innerText = "Start Working"; } else { document.getElementById('stat-prediction').innerText = "No Tasks"; }
+                const dates = []; let c = new Date(2025, 11, 31); const e = new Date(2026, 2, 15);
+                while(c<=e) { dates.push(c.toLocaleDateString('en-CA')); c.setDate(c.getDate()+1); }
+                const crunchData = dates.map(d => tasks.filter(t => !t.completed && d >= t.start && d <= t.deadline).length);
+                const crunchCols = crunchData.map(v => v>=6?'#ef4444':v>=3?'#f59e0b':'#3b82f6');
+                document.getElementById('forecast-wrapper').style.width = Math.max(dates.length*15, 300)+'px';
+                app.renderChart('chart-forecast', 'bar', { labels: dates.map(d=>d.slice(5)), datasets: [{ data: crunchData, backgroundColor: crunchCols, borderRadius: 3 }] }, { scales: {x:{display:false}, y:{display:false}}, plugins:{legend:{display:false}} });
+                let ap=0, aa=0; const dp=[], da=[];
+                dates.forEach(d => { ap += tasks.filter(t => t.deadline === d).length; dp.push(ap); if(d <= app.getIST()) { aa += tasks.filter(t => t.completed && (t.completedAt ? t.completedAt.startsWith(d) : t.deadline===d)).length; da.push(aa); } });
+                app.renderChart('chart-velocity', 'line', { labels: dates.map(d=>d.slice(5)), datasets: [ { label:'Scope', data:dp, borderColor:'rgba(0,0,0,0.2)', borderDash:[3,3], pointRadius:0 }, { label:'Actual', data:da, borderColor:'#10b981', backgroundColor:'rgba(16,185,129,0.1)', fill:true, pointRadius:0 } ] }, { scales: {x:{display:false}, y:{display:false}}, plugins:{legend:{display:false}} });
+            },
+            renderChart: (id, type, data, opts) => { const ctx = document.getElementById(id); if(!ctx) return; if(app.charts[id]) app.charts[id].destroy(); app.charts[id] = new Chart(ctx, {type, data, options: { ...opts, responsive: true, maintainAspectRatio: false }}); },
+            setMode: (m) => { document.getElementById('inp-type').value = m; if(m==='task'){document.getElementById('field-priority').classList.remove('hidden'); document.getElementById('field-start').classList.remove('hidden'); document.getElementById('field-end').classList.remove('col-span-2');} else {document.getElementById('field-priority').classList.add('hidden'); document.getElementById('field-start').classList.add('hidden'); document.getElementById('field-end').classList.add('col-span-2');} },
+            openModal: (mode, id) => { document.getElementById('modal-overlay').classList.add('open'); app.setMode('task'); if(mode==='create'){ document.getElementById('inp-id').value=''; document.getElementById('inp-start').value = app.getIST(); document.getElementById('inp-end').value = app.getIST(); document.getElementById('modal-title').innerText="New " + app.getLevel(app.currParent).toUpperCase(); } else { const i = app.data.find(x => x.id === id); document.getElementById('inp-id').value = i.id; document.getElementById('inp-title').value = i.title; if(i.type==='event') app.setMode('event'); else app.setMode('task'); } },
+            closeModal: () => document.getElementById('modal-overlay').classList.remove('open'),
+            
+            handleSave: (e) => { 
+                e.preventDefault(); 
+                const id=document.getElementById('inp-id').value; 
+                const mode=document.getElementById('inp-type').value; 
+                const p={title:document.getElementById('inp-title').value, deadline:document.getElementById('inp-end').value}; 
+                if(mode==='task'){ p.priority=document.querySelector('input[name="priority"]:checked').value; p.start=document.getElementById('inp-start').value; } else { p.priority='High'; p.start=p.deadline; } 
+                if(id) {
+                    const item = app.data.find(x=>x.id===id);
+                    if(mode === 'event') p.type = 'event'; else if(item.type === 'event') p.type = app.getLevel(item.parentId);
+                    Object.assign(item, p);
+                } else { 
+                    let type=mode; if(mode==='task') type=app.getLevel(app.currParent); 
+                    app.data.push({id:Date.now().toString(), parentId:app.currParent, completed:false, ...p, type:type}); 
+                } 
+                app.save(); app.closeModal(); 
+                app.renderList(); app.renderCalendar();
+                if(app.currPreviewDate) app.openTaskPreview(app.currPreviewDate);
+            }
+        };
+
+        app.init();
+    </script>
+</body>
+</html>
